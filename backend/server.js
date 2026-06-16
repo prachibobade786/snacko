@@ -1,8 +1,10 @@
 ﻿const express = require("express");
 require("dotenv").config();
 
+// import local files
 const db = require("./src/config/db");
 const userRoutes = require("./src/modules/user/userroutes");
+const addressRoutes =require("./src/modules/address/addressroutes");
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -20,6 +22,9 @@ app.get("/", (req, res) => {
 // all routers
 
 app.use("/api/users", userRoutes);
+app.use("/api/address", addressRoutes);
+
+
 
 app.use((req, res) => {
   res.status(404).json({
