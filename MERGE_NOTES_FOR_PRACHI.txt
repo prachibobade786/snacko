@@ -1,0 +1,28 @@
+Snacko merge notes for Prachi
+
+1. Folder structure now follows Sanika style:
+   backend/src/modules/category
+   backend/src/modules/product
+   backend/src/modules/cartItem
+   backend/src/modules/payment
+
+2. Only import paths were changed in Prachi model files:
+   from ../utils/db
+   to   ../../config/db
+
+3. Extra backend/src/modules/utils/db.js was removed.
+   Now there is only one database file:
+   backend/src/config/db.js
+
+4. config/db.js supports both styles:
+   Sanika: await db.execute(sql, values)
+   Prachi: db.query(sql, values, callback)
+
+5. Do not push backend/.env to GitHub.
+   Push backend/.env.example only.
+
+6. Import Postman collection from:
+   postman/Snacko_Prachi_APIs.postman_collection.json
+
+7. In Postman, baseUrl variable is:
+   http://localhost:4000/api
