@@ -1,10 +1,18 @@
-﻿const express = require("express");
+const express = require("express");
 require("dotenv").config();
 
 // import local files
 const db = require("./src/config/db");
+
+// Sanika routes
 const userRoutes = require("./src/modules/user/userroutes");
-const addressRoutes =require("./src/modules/address/addressroutes");
+const addressRoutes = require("./src/modules/address/addressroutes");
+
+// Prachi routes
+const categoryRoutes = require("./src/modules/category/categoryRoutes");
+const productRoutes = require("./src/modules/product/productRoutes");
+const cartItemRoutes = require("./src/modules/cartItem/cartItemRoutes");
+const paymentRoutes = require("./src/modules/payment/paymentRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -15,21 +23,24 @@ app.use(express.urlencoded({ extended: true }));
 app.get("/", (req, res) => {
   res.json({
     success: true,
-    message: "Snacko backend is running",
+    message: "Snacko backend is running"
   });
 });
 
-// all routers
-
+// Sanika APIs
 app.use("/api/users", userRoutes);
 app.use("/api/address", addressRoutes);
 
-
+// Prachi APIs
+app.use("/api", categoryRoutes);
+app.use("/api", productRoutes);
+app.use("/api", cartItemRoutes);
+app.use("/api", paymentRoutes);
 
 app.use((req, res) => {
   res.status(404).json({
     success: false,
-    message: "Endpoint not found",
+    message: "Endpoint not found"
   });
 });
 
@@ -37,12 +48,11 @@ app.use((err, req, res, next) => {
   console.error(err);
   res.status(err.status || 500).json({
     success: false,
-    message: err.message || "Internal server error",
+    message: err.message || "Internal server error"
   });
 });
 
 // checking the connection with database before starting the server
-
 const startServer = async () => {
   try {
     await db.getConnection();
