@@ -20,10 +20,16 @@ const removeAddress = async (id) => {
     return await addressModel.deleteAddress(id);
 };
 
+const addressExists = async (addressId, userId) => {
+    const address = await addressModel.getAddressById(addressId);
+    return address && address.user_id === userId ? address : null;
+};
+
 module.exports = {
     addAddress,
     getUserAddresses,
     getAddress,
     editAddress,
-    removeAddress
+    removeAddress,
+    addressExists
 };

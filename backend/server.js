@@ -4,7 +4,10 @@ require("dotenv").config();
 // import local files
 const db = require("./src/config/db");
 const userRoutes = require("./src/modules/user/userroutes");
-const addressRoutes =require("./src/modules/address/addressroutes");
+const addressRoutes = require("./src/modules/address/addressroutes");
+const orderRoutes = require("./src/modules/order/orderroutes");
+const orderItemRoutes = require("./src/modules/orderitems/orderitemsrouter");
+
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -23,8 +26,8 @@ app.get("/", (req, res) => {
 
 app.use("/api/users", userRoutes);
 app.use("/api/address", addressRoutes);
-
-
+app.use("/api/orders", orderRoutes);
+app.use("/api/order-items", orderItemRoutes);
 
 app.use((req, res) => {
   res.status(404).json({
