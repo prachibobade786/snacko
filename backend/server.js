@@ -7,6 +7,9 @@ const db = require("./src/config/db");
 // Sanika routes
 const userRoutes = require("./src/modules/user/userroutes");
 const addressRoutes = require("./src/modules/address/addressroutes");
+const orderRoutes = require("./src/modules/order/orderroutes");
+const orderItemRoutes = require("./src/modules/orderitems/orderitemsrouter");
+
 
 // Prachi routes
 const categoryRoutes = require("./src/modules/category/categoryRoutes");
@@ -30,6 +33,8 @@ app.get("/", (req, res) => {
 // Sanika APIs
 app.use("/api/users", userRoutes);
 app.use("/api/address", addressRoutes);
+app.use("/api/orders", orderRoutes);
+app.use("/api/order-items", orderItemRoutes);
 
 // Prachi APIs
 app.use("/api", categoryRoutes);
