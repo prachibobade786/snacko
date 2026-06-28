@@ -11,6 +11,8 @@ const createUser = async (user) => {
     user.email,
     user.password,
     user.mobile
+
+    
   ]);
 
   return result;
