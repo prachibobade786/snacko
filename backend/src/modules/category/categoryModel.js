@@ -1,7 +1,7 @@
 const db = require("../../config/db");
 
 // add category
-const addCategory = (category, callback) => {
+const addCategory = async (category) => {
   const { category_name, category_description, category_image, is_active } = category;
 
   const sql = `
@@ -10,15 +10,18 @@ const addCategory = (category, callback) => {
     VALUES (?, ?, ?, ?)
   `;
 
-  db.query(
-    sql,
-    [category_name, category_description, category_image, is_active],
-    callback
-  );
+  const [result] = await db.execute(sql, [
+    category_name,
+    category_description,
+    category_image,
+    is_active
+  ]);
+
+  return result;
 };
 
 // get all categories
-const getAllCategories = (callback) => {
+const getAllCategories = async () => {
   const sql = `
     SELECT
       category_id,
@@ -29,13 +32,15 @@ const getAllCategories = (callback) => {
       created_at,
       updated_at
     FROM categories
+    ORDER BY category_id DESC
   `;
 
-  db.query(sql, callback);
+  const [rows] = await db.execute(sql);
+  return rows;
 };
 
 // get category by id
-const getCategoryById = (categoryId, callback) => {
+const getCategoryById = async (categoryId) => {
   const sql = `
     SELECT
       category_id,
@@ -49,11 +54,12 @@ const getCategoryById = (categoryId, callback) => {
     WHERE category_id = ?
   `;
 
-  db.query(sql, [categoryId], callback);
+  const [rows] = await db.execute(sql, [categoryId]);
+  return rows[0];
 };
 
 // update category
-const updateCategory = (categoryId, category, callback) => {
+const updateCategory = async (categoryId, category) => {
   const { category_name, category_description, category_image, is_active } = category;
 
   const sql = `
@@ -66,17 +72,22 @@ const updateCategory = (categoryId, category, callback) => {
     WHERE category_id = ?
   `;
 
-  db.query(
-    sql,
-    [category_name, category_description, category_image, is_active, categoryId],
-    callback
-  );
+  const [result] = await db.execute(sql, [
+    category_name,
+    category_description,
+    category_image,
+    is_active,
+    categoryId
+  ]);
+
+  return result;
 };
 
 // delete category
-const deleteCategory = (categoryId, callback) => {
+const deleteCategory = async (categoryId) => {
   const sql = "DELETE FROM categories WHERE category_id = ?";
-  db.query(sql, [categoryId], callback);
+  const [result] = await db.execute(sql, [categoryId]);
+  return result;
 };
 
 module.exports = {

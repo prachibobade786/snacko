@@ -7,33 +7,38 @@ const createAddress = async (address) => {
         INSERT INTO addresses
         (
             user_id,
+            address_type,
             address_line1,
             address_line2,
             city,
             state,
             pincode,
             country,
-            is_default
+            is_default,
+            latitude,
+            longitude
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const [result] = await db.execute(query, [
         address.user_id,
+        address.address_type || null,
         address.address_line1,
         address.address_line2,
         address.city,
         address.state,
         address.pincode,
         address.country,
-        address.is_default || false
+        address.is_default || false,
+        address.latitude || null,
+        address.longitude || null
     ]);
 
     return result;
 };
 
 // Get All Addresses of User
-
 const getAddressesByUserId = async (userId) => {
 
     const [rows] = await db.execute(
@@ -45,7 +50,6 @@ const getAddressesByUserId = async (userId) => {
 };
 
 // Get Address By ID
-
 const getAddressById = async (id) => {
 
     const [rows] = await db.execute(
@@ -57,28 +61,33 @@ const getAddressById = async (id) => {
 };
 
 // Update Address
-
 const updateAddress = async (id, address) => {
 
     const query = `
         UPDATE addresses
         SET
+            address_type = ?,
             address_line1 = ?,
             address_line2 = ?,
             city = ?,
             state = ?,
             pincode = ?,
-            country = ?
+            country = ?,
+            latitude = ?,
+            longitude = ?
         WHERE id = ?
     `;
 
     const [result] = await db.execute(query, [
+        address.address_type || null,
         address.address_line1,
         address.address_line2,
         address.city,
         address.state,
         address.pincode,
         address.country,
+        address.latitude || null,
+        address.longitude || null,
         id
     ]);
 
@@ -86,7 +95,6 @@ const updateAddress = async (id, address) => {
 };
 
 // Delete Address
-
 const deleteAddress = async (id) => {
 
     const [result] = await db.execute(

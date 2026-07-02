@@ -1,33 +1,27 @@
 const productModel = require("./productModel");
 
-// add product
-const addProduct = (productData, callback) => {
-  productModel.addProduct(productData, callback);
+const addProduct = async (productData) => {
+  return await productModel.addProduct(productData);
 };
 
-// get all products
-const getAllProducts = (callback) => {
-  productModel.getAllProducts(callback);
+const getAllProducts = async () => {
+  return await productModel.getAllProducts();
 };
 
-// get product by id
-const getProductById = (productId, callback) => {
-  productModel.getProductById(productId, callback);
+const getProductById = async (productId) => {
+  return await productModel.getProductById(productId);
 };
 
-// get products by category id
-const getProductsByCategoryId = (categoryId, callback) => {
-  productModel.getProductsByCategoryId(categoryId, callback);
+const getProductsByCategoryId = async (categoryId) => {
+  return await productModel.getProductsByCategoryId(categoryId);
 };
 
-// update product
-const updateProduct = (productId, productData, callback) => {
-  productModel.updateProduct(productId, productData, callback);
+const updateProduct = async (productId, productData) => {
+  return await productModel.updateProduct(productId, productData);
 };
 
-// delete product
-const deleteProduct = (productId, callback) => {
-  productModel.deleteProduct(productId, callback);
+const deleteProduct = async (productId) => {
+  return await productModel.deleteProduct(productId);
 };
 
 module.exports = {

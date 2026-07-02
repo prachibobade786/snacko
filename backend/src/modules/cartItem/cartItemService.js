@@ -1,33 +1,27 @@
 const cartItemModel = require("./cartItemModel");
 
-// add cart item
-const addCartItem = (cartItemData, callback) => {
-  cartItemModel.addCartItem(cartItemData, callback);
+const addCartItem = async (cartItemData) => {
+  return await cartItemModel.addCartItem(cartItemData);
 };
 
-// get all cart items
-const getAllCartItems = (callback) => {
-  cartItemModel.getAllCartItems(callback);
+const getAllCartItems = async () => {
+  return await cartItemModel.getAllCartItems();
 };
 
-// get cart item by id
-const getCartItemById = (cartItemId, callback) => {
-  cartItemModel.getCartItemById(cartItemId, callback);
+const getCartItemById = async (cartItemId) => {
+  return await cartItemModel.getCartItemById(cartItemId);
 };
 
-// get cart items by user id
-const getCartItemsByUserId = (userId, callback) => {
-  cartItemModel.getCartItemsByUserId(userId, callback);
+const getCartItemsByUserId = async (userId) => {
+  return await cartItemModel.getCartItemsByUserId(userId);
 };
 
-// update cart item
-const updateCartItem = (cartItemId, cartItemData, callback) => {
-  cartItemModel.updateCartItem(cartItemId, cartItemData, callback);
+const updateCartItem = async (cartItemId, cartItemData) => {
+  return await cartItemModel.updateCartItem(cartItemId, cartItemData);
 };
 
-// delete cart item
-const deleteCartItem = (cartItemId, callback) => {
-  cartItemModel.deleteCartItem(cartItemId, callback);
+const deleteCartItem = async (cartItemId) => {
+  return await cartItemModel.deleteCartItem(cartItemId);
 };
 
 module.exports = {

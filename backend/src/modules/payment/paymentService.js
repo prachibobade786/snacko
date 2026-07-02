@@ -1,38 +1,31 @@
 const paymentModel = require("./paymentModel");
 
-// add payment
-const addPayment = (paymentData, callback) => {
-  paymentModel.addPayment(paymentData, callback);
+const addPayment = async (paymentData) => {
+  return await paymentModel.addPayment(paymentData);
 };
 
-// get all payments
-const getAllPayments = (callback) => {
-  paymentModel.getAllPayments(callback);
+const getAllPayments = async () => {
+  return await paymentModel.getAllPayments();
 };
 
-// get payment by id
-const getPaymentById = (paymentId, callback) => {
-  paymentModel.getPaymentById(paymentId, callback);
+const getPaymentById = async (paymentId) => {
+  return await paymentModel.getPaymentById(paymentId);
 };
 
-// get payments by user id
-const getPaymentsByUserId = (userId, callback) => {
-  paymentModel.getPaymentsByUserId(userId, callback);
+const getPaymentsByUserId = async (userId) => {
+  return await paymentModel.getPaymentsByUserId(userId);
 };
 
-// get payments by order id
-const getPaymentsByOrderId = (orderId, callback) => {
-  paymentModel.getPaymentsByOrderId(orderId, callback);
+const getPaymentsByOrderId = async (orderId) => {
+  return await paymentModel.getPaymentsByOrderId(orderId);
 };
 
-// update payment
-const updatePayment = (paymentId, paymentData, callback) => {
-  paymentModel.updatePayment(paymentId, paymentData, callback);
+const updatePayment = async (paymentId, paymentData) => {
+  return await paymentModel.updatePayment(paymentId, paymentData);
 };
 
-// delete payment
-const deletePayment = (paymentId, callback) => {
-  paymentModel.deletePayment(paymentId, callback);
+const deletePayment = async (paymentId) => {
+  return await paymentModel.deletePayment(paymentId);
 };
 
 module.exports = {

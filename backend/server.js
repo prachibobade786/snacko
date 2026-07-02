@@ -7,12 +7,19 @@ const db = require("./src/config/db");
 // Sanika routes
 const userRoutes = require("./src/modules/user/userroutes");
 const addressRoutes = require("./src/modules/address/addressroutes");
+const orderRoutes = require("./src/modules/order/orderroutes");
+const orderItemRoutes = require("./src/modules/orderitems/orderitemsrouter");
+
 
 // Prachi routes
 const categoryRoutes = require("./src/modules/category/categoryRoutes");
 const productRoutes = require("./src/modules/product/productRoutes");
 const cartItemRoutes = require("./src/modules/cartItem/cartItemRoutes");
 const paymentRoutes = require("./src/modules/payment/paymentRoutes");
+
+// Unique feature routes
+const smartCartRoutes = require("./src/modules/smartCart/smartCartRoutes");
+const deliveryRoutes = require("./src/modules/delivery/deliveryRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -30,12 +37,18 @@ app.get("/", (req, res) => {
 // Sanika APIs
 app.use("/api/users", userRoutes);
 app.use("/api/address", addressRoutes);
+app.use("/api/orders", orderRoutes);
+app.use("/api/order-items", orderItemRoutes);
 
 // Prachi APIs
 app.use("/api", categoryRoutes);
 app.use("/api", productRoutes);
 app.use("/api", cartItemRoutes);
 app.use("/api", paymentRoutes);
+
+// Unique feature APIs
+app.use("/api/smart-cart", smartCartRoutes);
+app.use("/api/delivery", deliveryRoutes);
 
 app.use((req, res) => {
   res.status(404).json({

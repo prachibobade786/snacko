@@ -1,7 +1,7 @@
 const db = require("../../config/db");
 
 // add payment
-const addPayment = (payment, callback) => {
+const addPayment = async (payment) => {
   const { order_id, user_id, amount, payment_method, payment_status, transaction_id } = payment;
 
   const sql = `
@@ -10,60 +10,68 @@ const addPayment = (payment, callback) => {
     VALUES (?, ?, ?, ?, ?, ?)
   `;
 
-  db.query(
-    sql,
-    [order_id, user_id, amount, payment_method, payment_status, transaction_id],
-    callback
-  );
+  const [result] = await db.execute(sql, [
+    order_id,
+    user_id,
+    amount,
+    payment_method,
+    payment_status,
+    transaction_id
+  ]);
+
+  return result;
 };
 
 // get all payments
-const getAllPayments = (callback) => {
+const getAllPayments = async () => {
   const sql = `
-  SELECT
-    p.payment_id,
-    p.order_id,
-    p.user_id,
-    u.name AS full_name,
-    p.amount,
-    p.payment_method,
-    p.payment_status,
-    p.transaction_id,
-    p.payment_date,
-    p.created_at,
-    p.updated_at
-  FROM payments p
-  JOIN users u ON p.user_id = u.id
-`;
+    SELECT
+      p.payment_id,
+      p.order_id,
+      p.user_id,
+      u.name AS full_name,
+      p.amount,
+      p.payment_method,
+      p.payment_status,
+      p.transaction_id,
+      p.payment_date,
+      p.created_at,
+      p.updated_at
+    FROM payments p
+    JOIN users u ON p.user_id = u.id
+    ORDER BY p.payment_id DESC
+  `;
 
-  db.query(sql, callback);
+  const [rows] = await db.execute(sql);
+  return rows;
 };
 
 // get payment by id
-const getPaymentById = (paymentId, callback) => {
+const getPaymentById = async (paymentId) => {
   const sql = `
-  SELECT
-    p.payment_id,
-    p.order_id,
-    p.user_id,
-    u.name AS full_name,
-    p.amount,
-    p.payment_method,
-    p.payment_status,
-    p.transaction_id,
-    p.payment_date,
-    p.created_at,
-    p.updated_at
-  FROM payments p
-  JOIN users u ON p.user_id = u.id
-  WHERE p.payment_id = ?
-`;
+    SELECT
+      p.payment_id,
+      p.order_id,
+      p.user_id,
+      u.name AS full_name,
+      p.amount,
+      p.payment_method,
+      p.payment_status,
+      p.transaction_id,
+      p.payment_date,
+      p.created_at,
+      p.updated_at
+    FROM payments p
+    JOIN users u ON p.user_id = u.id
+    WHERE p.payment_id = ?
+  `;
 
-  db.query(sql, [paymentId], callback);
+  const [rows] = await db.execute(sql, [paymentId]);
+  return rows[0];
 };
 
 // get payments by user id
-const getPaymentsByUserId = (userId, callback) => {
+const getPaymentsByUserId = async (userId) => {
   const sql = `
     SELECT
       payment_id,
@@ -78,13 +86,15 @@ const getPaymentsByUserId = (userId, callback) => {
       updated_at
     FROM payments
     WHERE user_id = ?
+    ORDER BY payment_id DESC
   `;
 
-  db.query(sql, [userId], callback);
+  const [rows] = await db.execute(sql, [userId]);
+  return rows;
 };
 
 // get payments by order id
-const getPaymentsByOrderId = (orderId, callback) => {
+const getPaymentsByOrderId = async (orderId) => {
   const sql = `
     SELECT
       payment_id,
@@ -99,13 +109,15 @@ const getPaymentsByOrderId = (orderId, callback) => {
       updated_at
     FROM payments
     WHERE order_id = ?
+    ORDER BY payment_id DESC
   `;
 
-  db.query(sql, [orderId], callback);
+  const [rows] = await db.execute(sql, [orderId]);
+  return rows;
 };
 
 // update payment
-const updatePayment = (paymentId, payment, callback) => {
+const updatePayment = async (paymentId, payment) => {
   const { amount, payment_method, payment_status, transaction_id } = payment;
 
   const sql = `
@@ -118,17 +130,22 @@ const updatePayment = (paymentId, payment, callback) => {
     WHERE payment_id = ?
   `;
 
-  db.query(
-    sql,
-    [amount, payment_method, payment_status, transaction_id, paymentId],
-    callback
-  );
+  const [result] = await db.execute(sql, [
+    amount,
+    payment_method,
+    payment_status,
+    transaction_id,
+    paymentId
+  ]);
+
+  return result;
 };
 
 // delete payment
-const deletePayment = (paymentId, callback) => {
+const deletePayment = async (paymentId) => {
   const sql = "DELETE FROM payments WHERE payment_id = ?";
-  db.query(sql, [paymentId], callback);
+  const [result] = await db.execute(sql, [paymentId]);
+  return result;
 };
 
 module.exports = {

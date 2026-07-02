@@ -1,28 +1,23 @@
 const categoryModel = require("./categoryModel");
 
-// add category
-const addCategory = (categoryData, callback) => {
-  categoryModel.addCategory(categoryData, callback);
+const addCategory = async (categoryData) => {
+  return await categoryModel.addCategory(categoryData);
 };
 
-// get all categories
-const getAllCategories = (callback) => {
-  categoryModel.getAllCategories(callback);
+const getAllCategories = async () => {
+  return await categoryModel.getAllCategories();
 };
 
-// get category by id
-const getCategoryById = (categoryId, callback) => {
-  categoryModel.getCategoryById(categoryId, callback);
+const getCategoryById = async (categoryId) => {
+  return await categoryModel.getCategoryById(categoryId);
 };
 
-// update category
-const updateCategory = (categoryId, categoryData, callback) => {
-  categoryModel.updateCategory(categoryId, categoryData, callback);
+const updateCategory = async (categoryId, categoryData) => {
+  return await categoryModel.updateCategory(categoryId, categoryData);
 };
 
-// delete category
-const deleteCategory = (categoryId, callback) => {
-  categoryModel.deleteCategory(categoryId, callback);
+const deleteCategory = async (categoryId) => {
+  return await categoryModel.deleteCategory(categoryId);
 };
 
 module.exports = {
