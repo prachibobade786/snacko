@@ -27,7 +27,7 @@ const login = async (email, password) => {
   }
 
   const token = jwt.sign(
-    { id: user.id, email: user.email },
+    { id: user.id, email: user.email, role: user.role },
     process.env.JWT_SECRET,
     { expiresIn: "7d" }
   );
@@ -38,6 +38,7 @@ const login = async (email, password) => {
       id: user.id,
       name: user.name,
       email: user.email,
+      role: user.role,
     },
   };
 };
@@ -48,8 +49,51 @@ const getProfile = async (id) => {
   return user;
 };
 
+const updateProfile = async (id, data) => {
+  const user = await userModel.getUserById(id);
+  if (!user) throw new Error("User not found");
+  
+  if (data.email && data.email !== user.email) {
+    const duplicate = await userModel.getUserByEmail(data.email);
+    if (duplicate) throw new Error("Email already registered by another account");
+  }
+
+  return await userModel.updateUser(id, {
+    name: data.name || user.name,
+    email: data.email || user.email,
+    mobile: data.mobile || user.mobile,
+  });
+};
+
+const forgotPassword = async (email) => {
+  const user = await userModel.getUserByEmail(email);
+  if (!user) {
+    throw new Error("No user registered with this email address");
+  }
+  // Simulated OTP system (returns 123456 for demo purposes)
+  return { email, code: "123456" };
+};
+
+const resetPassword = async (email, code, newPassword) => {
+  const user = await userModel.getUserByEmail(email);
+  if (!user) {
+    throw new Error("User not found");
+  }
+  
+  if (code !== "123456") {
+    throw new Error("Invalid reset verification code");
+  }
+
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
+  await userModel.updateUserPassword(email, hashedPassword);
+  return { success: true };
+};
+
 module.exports = {
   register,
   login,
   getProfile,
+  updateProfile,
+  forgotPassword,
+  resetPassword,
 };
