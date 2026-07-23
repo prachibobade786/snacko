@@ -114,7 +114,7 @@ const getOrderDetails = async (orderId) => {
 };
 
 // Update order status
-const updateOrderStatus = async (orderId, status) => {
+const updateOrderStatus = async (orderId, status, deliveryInfo = {}) => {
   const allowedStatuses = ["pending", "processing", "shipped", "delivered", "cancelled"];
   if (!allowedStatuses.includes(status)) {
     throw new Error("Invalid status. Allowed statuses are: pending, processing, shipped, delivered, cancelled");
@@ -123,6 +123,17 @@ const updateOrderStatus = async (orderId, status) => {
   const result = await adminModel.updateOrderStatus(orderId, status);
   if (result.affectedRows === 0) {
     throw new Error("Order not found");
+  }
+
+  if (deliveryInfo.delivery_partner_name !== undefined || 
+      deliveryInfo.delivery_partner_phone !== undefined || 
+      deliveryInfo.estimated_delivery_minutes !== undefined) {
+    await adminModel.updateOrderDeliveryDetails(
+      orderId,
+      deliveryInfo.delivery_partner_name || null,
+      deliveryInfo.delivery_partner_phone || null,
+      deliveryInfo.estimated_delivery_minutes !== undefined ? parseInt(deliveryInfo.estimated_delivery_minutes) : 20
+    );
   }
   return true;
 };

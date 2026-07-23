@@ -1,3 +1,5 @@
+
+
 const adminService = require("./adminServices");
 
 const getDashboardStats = async (req, res) => {
@@ -132,7 +134,7 @@ const getOrderDetails = async (req, res) => {
 const updateOrderStatus = async (req, res) => {
   try {
     const orderId = req.params.id;
-    const { status } = req.body;
+    const { status, delivery_partner_name, delivery_partner_phone, estimated_delivery_minutes } = req.body;
 
     if (!status) {
       return res.status(400).json({
@@ -141,7 +143,11 @@ const updateOrderStatus = async (req, res) => {
       });
     }
 
-    await adminService.updateOrderStatus(orderId, status);
+    await adminService.updateOrderStatus(orderId, status, {
+      delivery_partner_name,
+      delivery_partner_phone,
+      estimated_delivery_minutes
+    });
     res.status(200).json({
       success: true,
       message: `Order status updated successfully to '${status}'`

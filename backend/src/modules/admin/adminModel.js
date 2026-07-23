@@ -103,10 +103,13 @@ const deleteUser = async (userId) => {
 
 const getOrdersList = async (limit, offset, status = "", search = "") => {
   let query = `
-    SELECT o.id, o.user_id, u.name AS customer_name, u.email AS customer_email,
-           o.address_id, o.total_amount, o.status, o.created_at, o.updated_at
+    SELECT o.id AS order_id, o.user_id, u.name AS name, u.email AS email,
+           o.address_id, o.total_amount, o.status, o.created_at AS order_date, o.updated_at,
+           o.delivery_partner_name, o.delivery_partner_phone, o.estimated_delivery_minutes,
+           a.pincode AS shipping_pincode
     FROM orders o
     JOIN users u ON o.user_id = u.id
+    LEFT JOIN addresses a ON o.address_id = a.id
     WHERE 1=1
   `;
   const params = [];
@@ -156,6 +159,7 @@ const getOrderMainDetails = async (orderId) => {
   const query = `
     SELECT o.id AS order_id, o.user_id, u.name AS customer_name, u.email AS customer_email, u.mobile AS customer_mobile,
            o.total_amount, o.status, o.created_at, o.updated_at,
+           o.delivery_partner_name, o.delivery_partner_phone, o.estimated_delivery_minutes,
            a.address_line1, a.address_line2, a.city, a.state, a.pincode, a.country
     FROM orders o
     JOIN users u ON o.user_id = u.id
@@ -182,6 +186,12 @@ const updateOrderStatus = async (orderId, status) => {
   return result;
 };
 
+const updateOrderDeliveryDetails = async (orderId, name, phone, minutes) => {
+  const query = "UPDATE orders SET delivery_partner_name = ?, delivery_partner_phone = ?, estimated_delivery_minutes = ? WHERE id = ?";
+  const [result] = await db.execute(query, [name, phone, minutes, orderId]);
+  return result;
+};
+
 module.exports = {
   getTotalSales,
   getTotalOrdersCount,
@@ -198,5 +208,6 @@ module.exports = {
   getOrdersCount,
   getOrderMainDetails,
   getOrderItemsList,
-  updateOrderStatus
+  updateOrderStatus,
+  updateOrderDeliveryDetails
 };
