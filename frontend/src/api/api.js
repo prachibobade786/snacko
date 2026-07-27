@@ -31,3 +31,58 @@ export const checkPincodeService = async (pincode) => {
   const res = await fetch(`${API_BASE}/warehouses/check/${pincode}`);
   return await res.json();
 };
+
+
+
+// 2. Authentication / Profile
+export const login = async (email, password) => {
+  const res = await fetch(`${API_BASE}/users/login`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify({ email, password })
+  });
+  return await res.json();
+};
+
+export const registerUser = async (name, email, password, mobile) => {
+  const res = await fetch(`${API_BASE}/users/register`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify({ name, email, password, mobile })
+  });
+  return await res.json();
+};
+
+export const forgotPassword = async (email) => {
+  const res = await fetch(`${API_BASE}/users/forgot-password`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify({ email })
+  });
+  return await res.json();
+};
+
+export const resetPassword = async (email, code, newPassword) => {
+  const res = await fetch(`${API_BASE}/users/reset-password`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify({ email, code, newPassword })
+  });
+  return await res.json();
+};
+
+export const fetchUserProfile = async (token) => {
+  const res = await fetch(`${API_BASE}/users/profile`, {
+    headers: getHeaders(token)
+  });
+  return await res.json();
+};
+
+export const updateProfile = async (token, profileData) => {
+  const res = await fetch(`${API_BASE}/users/profile`, {
+    method: "PUT",
+    headers: getHeaders(token),
+    body: JSON.stringify(profileData)
+  });
+  return await res.json();
+};
