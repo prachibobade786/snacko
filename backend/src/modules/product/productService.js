@@ -6,8 +6,8 @@ const addProduct = (productData, callback) => {
 };
 
 // get all products
-const getAllProducts = (callback) => {
-  productModel.getAllProducts(callback);
+const getAllProducts = (pincode, callback) => {
+  productModel.getAllProducts(pincode, callback);
 };
 
 // get product by id
@@ -16,8 +16,8 @@ const getProductById = (productId, callback) => {
 };
 
 // get products by category id
-const getProductsByCategoryId = (categoryId, callback) => {
-  productModel.getProductsByCategoryId(categoryId, callback);
+const getProductsByCategoryId = (categoryId, pincode, callback) => {
+  productModel.getProductsByCategoryId(categoryId, pincode, callback);
 };
 
 // update product
