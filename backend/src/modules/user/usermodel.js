@@ -29,7 +29,7 @@ const getUserByEmail = async (email) => {
 
 const getUserById = async (id) => {
   const [rows] = await db.execute(
-    "SELECT id, name, email, mobile, role FROM users WHERE id=?",
+    "SELECT id, name, email, mobile, role, warehouse_id FROM users WHERE id=?",
     [id]
   );
 
