@@ -26,7 +26,8 @@ const addProduct = (req, res) => {
     price,
     stock_quantity: stock_quantity || 0,
     product_image: product_image || null,
-    is_available: is_available === undefined ? true : is_available
+    is_available: is_available === undefined ? true : is_available,
+    warehouse_id: req.user ? req.user.warehouse_id : null
   };
 
   productService.addProduct(productData, (err, result) => {
@@ -48,7 +49,8 @@ const addProduct = (req, res) => {
 
 // GET /products
 const getAllProducts = (req, res) => {
-  productService.getAllProducts((err, result) => {
+  const { pincode } = req.query;
+  productService.getAllProducts(pincode, (err, result) => {
     if (err) {
       console.log(err);
       return res.status(500).json({
@@ -96,8 +98,9 @@ const getProductById = (req, res) => {
 // GET /categories/:categoryId/products
 const getProductsByCategoryId = (req, res) => {
   const categoryId = req.params.categoryId;
+  const { pincode } = req.query;
 
-  productService.getProductsByCategoryId(categoryId, (err, result) => {
+  productService.getProductsByCategoryId(categoryId, pincode, (err, result) => {
     if (err) {
       console.log(err);
       return res.status(500).json({
