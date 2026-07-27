@@ -86,3 +86,40 @@ export const updateProfile = async (token, profileData) => {
   });
   return await res.json();
 };
+
+
+// 7. Product Ratings & Reviews
+export const fetchProductReviews = async (productId, token = null) => {
+  const res = await fetch(`${API_BASE}/products/${productId}/reviews`, {
+    headers: getHeaders(token)
+  });
+  return await res.json();
+};
+
+export const createProductReview = async (token, productId, reviewData) => {
+  const res = await fetch(`${API_BASE}/products/${productId}/reviews`, {
+    method: "POST",
+    headers: getHeaders(token),
+    body: JSON.stringify(reviewData)
+  });
+  return await res.json();
+};
+
+export const createProduct = async (token, productData) => {
+  const res = await fetch(`${API_BASE}/products`, {
+    method: "POST",
+    headers: getHeaders(token),
+    body: JSON.stringify(productData)
+  });
+  return await res.json();
+};
+
+export const createCategory = async (token, categoryData) => {
+  const res = await fetch(`${API_BASE}/categories`, {
+    method: "POST",
+    headers: getHeaders(token),
+    body: JSON.stringify(categoryData)
+  });
+  return await res.json();
+};
+
