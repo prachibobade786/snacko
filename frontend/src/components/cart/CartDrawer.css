@@ -1,0 +1,110 @@
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 400px;
+  background: white;
+  z-index: 101;
+  box-shadow: -10px 0 35px rgba(15, 23, 42, 0.12);
+  display: flex;
+  flex-direction: column;
+  animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (max-width: 480px) {
+  .drawer {
+    width: 100%;
+  }
+}
+
+/* Premium Cart Header Styles */
+.cart-header-container {
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(to right, #ffffff, #fafafb);
+}
+
+.cart-icon-wrapper {
+  position: relative;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--primary-accent-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 10px rgba(255, 101, 0, 0.08);
+}
+
+.cart-icon-svg {
+  color: var(--primary-accent);
+  transition: transform 0.3s ease;
+}
+
+.cart-icon-wrapper:hover .cart-icon-svg {
+  transform: scale(1.1) rotate(-8deg);
+}
+
+.cart-badge-indicator {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: var(--primary-accent);
+  color: white;
+  font-size: 10px;
+  font-weight: 800;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid white;
+  box-shadow: 0 2px 5px rgba(255, 101, 0, 0.35);
+  animation: pulseBorder 2s infinite;
+}
+
+.cart-header-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.cart-header-subtitle {
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.cart-close-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.cart-close-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+  transform: rotate(90deg);
+}
+
+.cart-close-btn:active {
+  transform: scale(0.9) rotate(90deg);
+}
