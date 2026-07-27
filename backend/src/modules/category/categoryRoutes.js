@@ -1,4 +1,6 @@
 const express = require("express");
+const verifyToken = require("../../middleware/authmiddleware");
+const isAdmin = require("../../middleware/adminmiddleware");
 
 const {
   addCategory,
@@ -11,10 +13,10 @@ const {
 const router = express.Router();
 
 // category APIs
-router.post("/categories", addCategory);
+router.post("/categories", verifyToken, isAdmin, addCategory);
 router.get("/categories", getAllCategories);
 router.get("/categories/:id", getCategoryById);
-router.put("/categories/:id", updateCategory);
-router.delete("/categories/:id", deleteCategory);
+router.put("/categories/:id", verifyToken, isAdmin, updateCategory);
+router.delete("/categories/:id", verifyToken, isAdmin, deleteCategory);
 
 module.exports = router;
