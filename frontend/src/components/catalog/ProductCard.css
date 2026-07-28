@@ -1,0 +1,92 @@
+.product-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+}
+
+.product-card:hover {
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+  transform: translateY(-2px);
+}
+
+.product-image-container {
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8fafc;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.product-image-placeholder {
+  font-size: 32px;
+  color: #94a3b8;
+}
+
+.stock-tag {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.stock-tag.in-stock {
+  background-color: #fff3eb;
+  color: #ff6500;
+}
+
+.stock-tag.low-stock {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.stock-tag.out-of-stock {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+/* Card Quantity Adjuster Button styling */
+.card-quantity-adjuster {
+  display: flex;
+  align-items: center;
+  background-color: #ff6500;
+  color: #ffffff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(255, 101, 0, 0.15);
+}
+
+.card-quantity-btn {
+  padding: 6px 10px;
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+}
+
+.card-quantity-btn:hover {
+  background-color: #d44a00;
+}
+
+.card-quantity-val {
+  padding: 0 4px;
+  font-size: 12px;
+  font-weight: 700;
+  min-width: 20px;
+  text-align: center;
+}
