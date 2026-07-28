@@ -87,11 +87,12 @@ const forgotPassword = async (req, res) => {
 
 const resetPassword = async (req, res) => {
   try {
-    const { email, code, newPassword } = req.body;
-    if (!email || !code || !newPassword) {
-      return res.status(400).json({ success: false, message: "Email, reset code, and new password are required" });
+    const { email, code, otp, newPassword } = req.body;
+    const verificationCode = code || otp;
+    if (!email || !verificationCode || !newPassword) {
+      return res.status(400).json({ success: false, message: "Email, verification code, and new password are required" });
     }
-    const result = await userService.resetPassword(email, code, newPassword);
+    const result = await userService.resetPassword(email, verificationCode, newPassword);
     res.status(200).json({
       success: true,
       message: "Password reset successful",
