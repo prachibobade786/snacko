@@ -1,29 +1,25 @@
 import React from "react";
-import useAppServices from "../../hooks/useAppServices";
+import "./Sidebar.css";
 
-export default function Footer() {
-  const { setMode } = useAppServices();
-
+export default function Sidebar({ categories, selectedCategory, setSelectedCategory }) {
   return (
-    <footer className="bg-slate-950 text-slate-400 text-xs py-8 mt-auto border-t border-slate-800">
-      <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4">
-        <div>
-          <span className="text-slate-100 font-extrabold logo-text text-sm">Snacko.</span>
-          <p className="mt-1 text-[11px] text-slate-500">© 2026 Snacko Technologies Pvt. Ltd. All rights reserved.</p>
-        </div>
-        <div className="flex gap-6">
-          <span className="hover:text-white cursor-pointer">Privacy Policy</span>
-          <span className="hover:text-white cursor-pointer">Terms of Service</span>
-          <span className="hover:text-white cursor-pointer">Support</span>
-          <span 
-            onClick={() => setMode("partner-login")}
-            className="hover:text-white cursor-pointer font-bold"
-            style={{ color: "var(--primary-color)" }}
-          >
-            Partner Portal
-          </span>
-        </div>
+    <aside className="sidebar-categories flex flex-col gap-2">
+      <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 px-3">Categories</h3>
+      <div 
+        className={`category-item ${selectedCategory === null ? "active" : ""}`}
+        onClick={() => setSelectedCategory(null)}
+      >
+        All Products
       </div>
-    </footer>
+      {categories.map(cat => (
+        <div 
+          key={cat.category_id}
+          className={`category-item ${selectedCategory === cat.category_id ? "active" : ""}`}
+          onClick={() => setSelectedCategory(cat.category_id)}
+        >
+          {cat.category_name}
+        </div>
+      ))}
+    </aside>
   );
 }

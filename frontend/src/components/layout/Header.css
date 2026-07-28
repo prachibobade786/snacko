@@ -1,0 +1,140 @@
+/* Storefront Header Sticky Panel */
+.storefront-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: #ffffff;
+  border-bottom: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  padding: 12px 24px;
+}
+
+.logo-text {
+  font-weight: 800;
+  font-size: 24px;
+  color: var(--primary-accent);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.logo-yellow {
+  color: #f59e0b;
+}
+
+/* Pincode selector form */
+.header-pincode-form {
+  display: flex;
+  align-items: center;
+  background-color: #f1f5f9;
+  border-radius: 9999px;
+  padding: 6px 12px;
+  border: 1.5px solid #cbd5e1;
+  transition: all 0.2s ease;
+}
+
+.header-pincode-form:focus-within {
+  border-color: #ff6500;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 2px rgba(255, 101, 0, 0.15);
+}
+
+.header-pincode-icon {
+  color: #ff6500;
+  margin-right: 6px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.header-pincode-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  font-weight: 600;
+  width: 140px;
+  color: #1e293b;
+  font-family: var(--font-family);
+}
+
+.header-pincode-input::placeholder {
+  color: #94a3b8;
+}
+
+.header-location-btn {
+  padding: 4px;
+  color: #94a3b8;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  margin-right: 4px;
+  transition: all 0.2s ease;
+}
+
+.header-location-btn:hover {
+  color: #ff6500;
+  background-color: #e2e8f0;
+}
+
+/* Search bar */
+.header-search-bar {
+  flex: 1;
+  max-width: 448px; /* max-w-md */
+  display: flex;
+  align-items: center;
+  background-color: #f1f5f9;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 9999px;
+  padding: 8px 16px;
+  transition: all 0.2s ease;
+}
+
+.header-search-bar:focus-within {
+  border-color: #ff6500;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 2px rgba(255, 101, 0, 0.15);
+}
+
+.header-search-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  width: 100%;
+  color: #1e293b;
+  font-family: var(--font-family);
+}
+
+.header-search-input::placeholder {
+  color: #94a3b8;
+}
+
+/* Cart count badge */
+.header-cart-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background-color: #ff6500;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 9999px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+/* Responsive constraints */
+@media (max-width: 768px) {
+  .header-search-bar {
+    display: none;
+  }
+}
