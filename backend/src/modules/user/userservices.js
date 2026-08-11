@@ -1,6 +1,9 @@
 const userModel = require("../user/usermodel");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const mailer = require("../../utils/mailer");
+
+const otpStore = {}; // { email: { code, expires } }
 
 const register = async (data) => {
   const existingUser = await userModel.getUserByEmail(data.email);
@@ -12,6 +15,12 @@ const register = async (data) => {
   data.password = hashedPassword;
 
   const result = await userModel.createUser(data);
+  
+  // Send Welcome Email asynchronously
+  mailer.sendWelcomeEmail(data.email, data.name).catch((err) => {
+    console.error("Error sending welcome email in background:", err);
+  });
+
   return result;
 };
 
@@ -27,7 +36,7 @@ const login = async (email, password) => {
   }
 
   const token = jwt.sign(
-    { id: user.id, email: user.email, role: user.role },
+    { id: user.id, email: user.email, role: user.role, warehouse_id: user.warehouse_id },
     process.env.JWT_SECRET,
     { expiresIn: "7d" }
   );
@@ -39,6 +48,7 @@ const login = async (email, password) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      warehouse_id: user.warehouse_id,
     },
   };
 };
@@ -70,8 +80,22 @@ const forgotPassword = async (email) => {
   if (!user) {
     throw new Error("No user registered with this email address");
   }
-  // Simulated OTP system (returns 123456 for demo purposes)
-  return { email, code: "123456" };
+  
+  // Generate random 6-digit code
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  
+  // Store OTP code in-memory with 10 minutes expiry
+  otpStore[email.toLowerCase()] = {
+    code,
+    expires: Date.now() + 10 * 60 * 1000
+  };
+
+  // Send Password Reset Email asynchronously
+  mailer.sendPasswordResetEmail(email, code).catch((err) => {
+    console.error("Error sending password reset email in background:", err);
+  });
+
+  return { email };
 };
 
 const resetPassword = async (email, code, newPassword) => {
@@ -80,9 +104,17 @@ const resetPassword = async (email, code, newPassword) => {
     throw new Error("User not found");
   }
   
-  if (code !== "123456") {
+  const stored = otpStore[email.toLowerCase()];
+  if (!stored || stored.code !== code) {
     throw new Error("Invalid reset verification code");
   }
+  if (stored.expires < Date.now()) {
+    delete otpStore[email.toLowerCase()];
+    throw new Error("Reset verification code has expired");
+  }
+
+  // Delete the OTP after successful validation
+  delete otpStore[email.toLowerCase()];
 
   const hashedPassword = await bcrypt.hash(newPassword, 10);
   await userModel.updateUserPassword(email, hashedPassword);
