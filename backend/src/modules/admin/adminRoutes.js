@@ -12,6 +12,7 @@ const {
   listUsers,
   updateUserRole,
   deleteUser,
+  createWarehouseUser,
   listOrders,
   getOrderDetails,
   updateOrderStatus
@@ -23,6 +24,7 @@ router.get("/dashboard/revenue-by-category", verifyToken, isAdmin, getCategoryRe
 
 // User Management
 router.get("/users", verifyToken, isAdmin, listUsers);
+router.post("/users/warehouse", verifyToken, isAdmin, createWarehouseUser);
 router.put("/users/:id/role", verifyToken, isAdmin, updateUserRole);
 router.delete("/users/:id", verifyToken, isAdmin, deleteUser);
 
