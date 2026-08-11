@@ -64,7 +64,7 @@ const getCategoryRevenue = async () => {
 const getAllUsers = async (limit, offset, search = "") => {
   const searchPattern = `%${search}%`;
   const query = `
-    SELECT id, name, email, mobile, role, created_at, updated_at
+    SELECT id, name, email, mobile, role, warehouse_id, created_at, updated_at
     FROM users
     WHERE name LIKE ? OR email LIKE ? OR mobile LIKE ?
     ORDER BY created_at DESC
@@ -192,6 +192,43 @@ const updateOrderDeliveryDetails = async (orderId, name, phone, minutes) => {
   return result;
 };
 
+const createWarehouseUser = async (user) => {
+  const query = `
+    INSERT INTO users (name, email, password, mobile, role, warehouse_id)
+    VALUES (?, ?, ?, ?, 'admin', ?)
+  `;
+  const [result] = await db.execute(query, [
+    user.name,
+    user.email,
+    user.password,
+    user.mobile || null,
+    user.warehouse_id ? parseInt(user.warehouse_id) : null
+  ]);
+  return result;
+};
+
+const getWarehouseStats = async () => {
+  const query = `
+    SELECT 
+      w.warehouse_id,
+      w.name AS warehouse_name,
+      COUNT(CASE WHEN DATE(o.created_at) = CURDATE() AND o.status != 'cancelled' THEN o.id END) AS today_order_count,
+      COALESCE(SUM(CASE WHEN DATE(o.created_at) = CURDATE() AND o.status != 'cancelled' THEN o.total_amount END), 0.00) AS today_order_amount,
+      COUNT(CASE WHEN YEARWEEK(o.created_at, 1) = YEARWEEK(CURDATE(), 1) AND o.status != 'cancelled' THEN o.id END) AS week_order_count,
+      COALESCE(SUM(CASE WHEN YEARWEEK(o.created_at, 1) = YEARWEEK(CURDATE(), 1) AND o.status != 'cancelled' THEN o.total_amount END), 0.00) AS week_order_amount,
+      COUNT(CASE WHEN YEAR(o.created_at) = YEAR(CURDATE()) AND MONTH(o.created_at) = MONTH(CURDATE()) AND o.status != 'cancelled' THEN o.id END) AS month_order_count,
+      COALESCE(SUM(CASE WHEN YEAR(o.created_at) = YEAR(CURDATE()) AND MONTH(o.created_at) = MONTH(CURDATE()) AND o.status != 'cancelled' THEN o.total_amount END), 0.00) AS month_order_amount
+    FROM warehouses w
+    LEFT JOIN warehouse_pincodes wp ON w.warehouse_id = wp.warehouse_id
+    LEFT JOIN addresses a ON wp.pincode = a.pincode
+    LEFT JOIN orders o ON a.id = o.address_id
+    GROUP BY w.warehouse_id, w.name
+    ORDER BY w.name
+  `;
+  const [rows] = await db.execute(query);
+  return rows;
+};
+
 module.exports = {
   getTotalSales,
   getTotalOrdersCount,
@@ -204,10 +241,12 @@ module.exports = {
   getTotalUsersCountWithSearch,
   updateUserRole,
   deleteUser,
+  createWarehouseUser,
   getOrdersList,
   getOrdersCount,
   getOrderMainDetails,
   getOrderItemsList,
   updateOrderStatus,
-  updateOrderDeliveryDetails
+  updateOrderDeliveryDetails,
+  getWarehouseStats
 };
