@@ -123,3 +123,56 @@ export const createCategory = async (token, categoryData) => {
   return await res.json();
 };
 
+
+
+// 8. Coupons
+export const fetchCoupons = async (token) => {
+  const res = await fetch(`${API_BASE}/coupons`, {
+    headers: getHeaders(token)
+  });
+  return await res.json();
+};
+
+export const createCoupon = async (token, couponData) => {
+  const res = await fetch(`${API_BASE}/coupons`, {
+    method: "POST",
+    headers: getHeaders(token),
+    body: JSON.stringify(couponData)
+  });
+  return await res.json();
+};
+
+export const updateCoupon = async (token, couponId, couponData) => {
+  const res = await fetch(`${API_BASE}/coupons/${couponId}`, {
+    method: "PATCH",
+    headers: getHeaders(token),
+    body: JSON.stringify(couponData)
+  });
+  return await res.json();
+};
+
+export const deleteCoupon = async (token, couponId) => {
+  const res = await fetch(`${API_BASE}/coupons/${couponId}`, {
+    method: "DELETE",
+    headers: getHeaders(token)
+  });
+  return await res.json();
+};
+
+export const applyCoupon = async (token, code, totalAmount) => {
+  const res = await fetch(`${API_BASE}/coupons/apply`, {
+    method: "POST",
+    headers: getHeaders(token),
+    body: JSON.stringify({ code, totalAmount })
+  });
+  return await res.json();
+};
+
+export const updateProductOffer = async (token, productId, discountPrice) => {
+  const res = await fetch(`${API_BASE}/products/${productId}/offer`, {
+    method: "PATCH",
+    headers: getHeaders(token),
+    body: JSON.stringify({ discount_price: discountPrice })
+  });
+  return await res.json();
+};
