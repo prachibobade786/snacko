@@ -7,9 +7,12 @@ export function AppProvider({ children }) {
   // Storefront and core states
   const [pincode, setPincode] = useState(localStorage.getItem("pincode") || "");
   const [pincodeInput, setPincodeInput] = useState(pincode);
+  const [resolvedAddress, setResolvedAddress] = useState(localStorage.getItem("resolvedAddress") || "");
   const [warehouse, setWarehouse] = useState(null);
   const [serviceable, setServiceable] = useState(null);
   const [checkingPincode, setCheckingPincode] = useState(false);
+  const [geolocationLoading, setGeolocationLoading] = useState(false);
+  const [geolocationMessage, setGeolocationMessage] = useState("");
   
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
@@ -19,6 +22,8 @@ export function AppProvider({ children }) {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [couponDiscount, setCouponDiscount] = useState(0);
   
   // Auth state
   const [user, setUser] = useState(JSON.parse(localStorage.getItem("user")) || null);
@@ -30,7 +35,7 @@ export function AppProvider({ children }) {
 
   // Mode state: 'customer', 'admin', or 'profile'
   const [mode, setMode] = useState("customer");
-  const [adminTab, setAdminTab] = useState("customer_users");
+  const [adminTab, setAdminTab] = useState("dashboard");
 
   // Admin panel states
   const [adminWarehouses, setAdminWarehouses] = useState([]);
@@ -41,6 +46,7 @@ export function AppProvider({ children }) {
   const [newWHAddress, setNewWHAddress] = useState("");
   const [newPincode, setNewPincode] = useState("");
   const [stockEdits, setStockEdits] = useState({}); // { product_id: quantity }
+  const [discountEdits, setDiscountEdits] = useState({}); // { product_id: discount_price }
   const [loadingAdmin, setLoadingAdmin] = useState(false);
 
   // New Admin Portal States
@@ -107,10 +113,34 @@ export function AppProvider({ children }) {
         setServiceable(true);
         localStorage.setItem("pincode", pin);
         fetchProducts(pin);
+        
+        // Fetch pincode details for resolvedAddress
+        fetch(`https://api.postalpincode.in/pincode/${pin}`)
+          .then(res => res.json())
+          .then(pData => {
+            if (pData && pData[0] && pData[0].Status === "Success" && pData[0].PostOffice && pData[0].PostOffice[0]) {
+              const info = pData[0].PostOffice[0];
+              const name = info.Name || "";
+              const dist = info.District || "";
+              const st = info.State || "";
+              const display = [name, dist, st].filter(Boolean).join(", ");
+              setResolvedAddress(display);
+              localStorage.setItem("resolvedAddress", display);
+            } else {
+              setResolvedAddress("");
+              localStorage.removeItem("resolvedAddress");
+            }
+          })
+          .catch(() => {
+            setResolvedAddress("");
+            localStorage.removeItem("resolvedAddress");
+          });
       } else {
         setWarehouse(null);
         setServiceable(false);
         setProducts([]);
+        setResolvedAddress("");
+        localStorage.removeItem("resolvedAddress");
         showToast("Service unavailable in this pincode", "error");
       }
     } catch (err) {
@@ -136,10 +166,12 @@ export function AppProvider({ children }) {
       return;
     }
 
-    showToast("Requesting GPS coordinates...", "info");
+    setGeolocationLoading(true);
+    setGeolocationMessage("Requesting GPS coordinates...");
     
     navigator.geolocation.getCurrentPosition(
       async (position) => {
+        setGeolocationMessage("Resolving address & pincode...");
         const { latitude, longitude } = position.coords;
         try {
           const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`, {
@@ -150,20 +182,32 @@ export function AppProvider({ children }) {
           const data = await res.json();
           if (data && data.address && data.address.postcode) {
             const cleanPostcode = data.address.postcode.replace(/\s/g, "");
+            
+            const neighbourhood = data.address.suburb || data.address.neighbourhood || data.address.city_district || "";
+            const city = data.address.city || data.address.town || data.address.village || "";
+            const state = data.address.state || "";
+            const addressDisplay = [neighbourhood, city, state].filter(Boolean).join(", ");
+
             setPincodeInput(cleanPostcode);
             setPincode(cleanPostcode);
-            showToast(`Location resolved: Pincode ${cleanPostcode}!`);
+            setResolvedAddress(addressDisplay);
+            localStorage.setItem("resolvedAddress", addressDisplay);
+            showToast(`Location resolved: ${addressDisplay} (${cleanPostcode})!`);
           } else {
             showToast(`GPS: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}. Could not resolve postal code.`, "error");
           }
         } catch (err) {
           console.error(err);
           showToast("Reverse geocoding connection failed", "error");
+        } finally {
+          setGeolocationLoading(false);
+          setGeolocationMessage("");
         }
       },
       (error) => {
-        console.error(error);
-        showToast("Location access denied or unavailable", "error");
+        setGeolocationLoading(false);
+        setGeolocationMessage("");
+        showToast("Geolocation access denied or timed out", "error");
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
@@ -308,6 +352,10 @@ export function AppProvider({ children }) {
 
     const existing = cart.find(item => item.product.product_id === product.product_id);
     if (existing) {
+      if (existing.quantity >= 4) {
+        alert("Maximum quantity allowed for a single product is 4 units.");
+        return;
+      }
       if (existing.quantity >= currentStock) {
         alert(`Only ${currentStock} units available at this warehouse`);
         return;
@@ -330,6 +378,10 @@ export function AppProvider({ children }) {
     if (newQty <= 0) {
       setCart(cart.filter(item => item.product.product_id !== productId));
     } else {
+      if (newQty > 4) {
+        alert("Maximum quantity allowed for a single product is 4 units.");
+        return;
+      }
       // Get live product data from state to get accurate stock
       const liveProd = products.find(p => p.product_id === productId) || existing.product;
       const maxStock = liveProd.stock_quantity;
@@ -346,8 +398,51 @@ export function AppProvider({ children }) {
     }
   };
 
+  const clearCart = () => {
+    if (window.confirm("Are you sure you want to remove all items from your cart?")) {
+      setCart([]);
+      setAppliedCoupon(null);
+      setCouponDiscount(0);
+    }
+  };
+
   const getCartTotal = () => {
-    return cart.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
+    return cart.reduce((sum, item) => {
+      const activePrice = (item.product.discount_price !== null && parseFloat(item.product.discount_price) < parseFloat(item.product.price))
+        ? parseFloat(item.product.discount_price)
+        : parseFloat(item.product.price);
+      return sum + (activePrice * item.quantity);
+    }, 0);
+  };
+
+  const formatTimeStr = (timeStr) => {
+    if (!timeStr) return "";
+    const parts = timeStr.split(":");
+    const hour = parseInt(parts[0], 10);
+    const min = parts[1];
+    const ampm = hour >= 12 ? "PM" : "AM";
+    const displayHour = hour % 12 || 12;
+    return `${displayHour}:${min} ${ampm}`;
+  };
+
+  const isDeliveryOpen = () => {
+    if (!warehouse) return true;
+    if (warehouse.is_active === 0) return false;
+    if (!warehouse.delivery_start_time || !warehouse.delivery_end_time) return true;
+    const start = warehouse.delivery_start_time;
+    const end = warehouse.delivery_end_time;
+    
+    const now = new Date();
+    const currentHour = String(now.getHours()).padStart(2, "0");
+    const currentMin = String(now.getMinutes()).padStart(2, "0");
+    const currentSec = String(now.getSeconds()).padStart(2, "0");
+    const currentTimeStr = `${currentHour}:${currentMin}:${currentSec}`;
+
+    if (start <= end) {
+      return (currentTimeStr >= start && currentTimeStr <= end);
+    } else {
+      return (currentTimeStr >= start || currentTimeStr <= end);
+    }
   };
 
   const [showAddressConfirmModal, setShowAddressConfirmModal] = useState(false);
@@ -412,12 +507,14 @@ export function AppProvider({ children }) {
 
     try {
       const targetAddressId = selectedAddrId || (userAddresses[0] ? userAddresses[0].id : 1);
-      const totalAmount = getCartTotal() + 15;
+      const totalAmount = getCartTotal() + 15 - couponDiscount;
 
       const orderData = await api.placeOrder(token, {
         address_id: targetAddressId, 
         total_amount: totalAmount,
-        pincode: pincode
+        pincode: pincode,
+        coupon_code: appliedCoupon ? appliedCoupon.code : null,
+        discount_amount: couponDiscount
       });
 
       if (!orderData.success) {
@@ -428,13 +525,16 @@ export function AppProvider({ children }) {
       const orderId = orderData.data?.insertId || orderData.order_id || 1;
       
       for (const item of cart) {
+        const itemActivePrice = (item.product.discount_price !== null && parseFloat(item.product.discount_price) < parseFloat(item.product.price))
+          ? parseFloat(item.product.discount_price)
+          : parseFloat(item.product.price);
         await api.createOrderItem(token, {
           order_id: orderId,
           product_id: item.product.product_id,
           product_name: item.product.product_name,
           quantity: item.quantity,
-          price: item.product.price,
-          subtotal: item.quantity * item.product.price,
+          price: itemActivePrice,
+          subtotal: item.quantity * itemActivePrice,
           warehouse_id: warehouse?.warehouse_id || 1
         });
       }
@@ -449,6 +549,8 @@ export function AppProvider({ children }) {
         } catch (e) {}
 
         setCart([]);
+        setAppliedCoupon(null);
+        setCouponDiscount(0);
         setIsCartOpen(false);
         setOrderComplete(true);
         fetchProducts(pincode);
@@ -497,6 +599,8 @@ export function AppProvider({ children }) {
 
               if (verifyRes.success) {
                 setCart([]);
+                setAppliedCoupon(null);
+                setCouponDiscount(0);
                 setIsCartOpen(false);
                 setOrderComplete(true);
                 fetchProducts(pincode);
@@ -551,6 +655,8 @@ export function AppProvider({ children }) {
 
       if (verifyRes.success) {
         setCart([]);
+        setAppliedCoupon(null);
+        setCouponDiscount(0);
         setIsCartOpen(false);
         setOrderComplete(true);
         fetchProducts(pincode);
@@ -667,6 +773,31 @@ export function AppProvider({ children }) {
     }
   };
 
+  const handleUpdateWarehouse = async (whId, name, address, delivery_start_time, delivery_end_time, is_active) => {
+    if (!name.trim()) return { success: false, message: "Name is required" };
+
+    try {
+      const data = await api.updateWarehouse(token, whId, { 
+        name, 
+        address, 
+        delivery_start_time, 
+        delivery_end_time,
+        is_active
+      });
+      if (data.success) {
+        showToast("Warehouse updated successfully!");
+        fetchAdminWarehouses();
+        return { success: true };
+      } else {
+        showToast(data.message || "Failed to update warehouse", "error");
+        return { success: false, message: data.message };
+      }
+    } catch (err) {
+      showToast("Failed to update warehouse", "error");
+      return { success: false, message: err.message };
+    }
+  };
+
   const handleAddPincode = async (e) => {
     e.preventDefault();
     if (!newPincode.trim() || !selectedAdminWH) return;
@@ -707,22 +838,37 @@ export function AppProvider({ children }) {
     });
   };
 
+  const handleDiscountChange = (productId, val) => {
+    setDiscountEdits({
+      ...discountEdits,
+      [productId]: val === "" ? null : parseFloat(val)
+    });
+  };
+
   const handleSaveStock = async () => {
-    if (!selectedAdminWH || Object.keys(stockEdits).length === 0) return;
+    if (!selectedAdminWH || (Object.keys(stockEdits).length === 0 && Object.keys(discountEdits).length === 0)) return;
     const whId = selectedAdminWH.warehouse_id || selectedAdminWH;
 
-    showToast("Saving stock changes...", "info");
+    showToast("Saving changes...", "info");
     try {
+      // 1. Save stock changes
       for (const [prodId, qty] of Object.entries(stockEdits)) {
         await api.updateWarehouseStock(token, whId, parseInt(prodId), qty);
       }
-      showToast("Inventory updated successfully!");
+      // 2. Save discount price changes
+      for (const [prodId, discountPrice] of Object.entries(discountEdits)) {
+        await api.updateProductOffer(token, parseInt(prodId), discountPrice);
+      }
+
+      showToast("Inventory & Offers updated successfully!");
+      setStockEdits({});
+      setDiscountEdits({});
       fetchWarehouseInventory(whId);
       if (pincode) {
         fetchProducts(pincode);
       }
     } catch (err) {
-      showToast("Failed to update stock", "error");
+      showToast("Failed to save changes", "error");
     }
   };
 
@@ -843,6 +989,7 @@ export function AppProvider({ children }) {
     <AppContext.Provider value={{
       pincode, setPincode,
       pincodeInput, setPincodeInput,
+      resolvedAddress, setResolvedAddress,
       warehouse, setWarehouse,
       serviceable, setServiceable,
       checkingPincode, setCheckingPincode,
@@ -854,6 +1001,8 @@ export function AppProvider({ children }) {
       selectedProduct, setSelectedProduct,
       isCartOpen, setIsCartOpen,
       orderComplete, setOrderComplete,
+      appliedCoupon, setAppliedCoupon,
+      couponDiscount, setCouponDiscount,
       user, setUser,
       token, setToken,
       isLoginOpen, setIsLoginOpen,
@@ -870,12 +1019,15 @@ export function AppProvider({ children }) {
       newWHAddress, setNewWHAddress,
       newPincode, setNewPincode,
       stockEdits, setStockEdits,
+      discountEdits, setDiscountEdits,
       loadingAdmin, setLoadingAdmin,
       toast, setToast,
       filteredProducts,
       showToast,
       handlePincodeSubmit,
       detectGeoLocation,
+      geolocationLoading,
+      geolocationMessage,
       handleLogin,
       handleLogout,
       autoLoginAs,
@@ -885,8 +1037,11 @@ export function AppProvider({ children }) {
       handleResetPassword,
       addToCart,
       updateCartQuantity,
+      clearCart,
       getCartTotal,
       handleCheckout,
+      formatTimeStr,
+      isDeliveryOpen,
       showAddressConfirmModal, setShowAddressConfirmModal,
       isRazorpayOpen, setIsRazorpayOpen,
       completeWebRazorpayPayment,
@@ -898,9 +1053,11 @@ export function AppProvider({ children }) {
       fetchCategories,
       selectWarehouseForAdmin,
       handleCreateWarehouse,
+      handleUpdateWarehouse,
       handleAddPincode,
       handleRemovePincode,
       handleStockChange,
+      handleDiscountChange,
       handleSaveStock,
       adminStats, setAdminStats,
       adminUsers, setAdminUsers,
