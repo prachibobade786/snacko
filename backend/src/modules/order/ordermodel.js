@@ -8,9 +8,11 @@ const createOrder = async (order) => {
             user_id,
             address_id,
             total_amount,
+            coupon_code,
+            discount_amount,
             status
         )
-        VALUES (?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?)
     `;
 
     const [result] = await db.execute(
@@ -19,6 +21,8 @@ const createOrder = async (order) => {
             order.user_id,
             order.address_id,
             order.total_amount,
+            order.coupon_code || null,
+            order.discount_amount || 0.00,
             "pending"
         ]
     );
@@ -27,20 +31,50 @@ const createOrder = async (order) => {
 };
 
 // Get Orders By User
-const getOrdersByUserId = async (userId) => {
+const getOrdersByUserId = async (userId, page = null, limit = null) => {
+    if (page && limit) {
+        const p = Math.max(1, parseInt(page) || 1);
+        const l = Math.max(1, parseInt(limit) || 10);
+        const offset = (p - 1) * l;
+
+        const [countRows] = await db.execute(
+            "SELECT COUNT(*) AS total FROM orders WHERE user_id = ?",
+            [userId]
+        );
+        const total = countRows[0] ? countRows[0].total : 0;
+
+        const [rows] = await db.query(
+            `SELECT o.*, p.payment_method, p.payment_status, p.transaction_id 
+             FROM orders o 
+             LEFT JOIN payments p ON o.id = p.order_id 
+             WHERE o.user_id = ? 
+             ORDER BY o.created_at DESC LIMIT ? OFFSET ?`,
+            [userId, l, offset]
+        );
+
+        return {
+            orders: rows,
+            total,
+            page: p,
+            limit: l,
+            totalPages: Math.ceil(total / l)
+        };
+    }
 
     const [rows] = await db.execute(
         `
-        SELECT *
-        FROM orders
-        WHERE user_id=?
-        ORDER BY created_at DESC
+        SELECT o.*, p.payment_method, p.payment_status, p.transaction_id
+        FROM orders o
+        LEFT JOIN payments p ON o.id = p.order_id
+        WHERE o.user_id = ?
+        ORDER BY o.created_at DESC
         `,
         [userId]
     );
 
     return rows;
 };
+
 
 // Get Order By Id
 const getOrderById = async (id) => {
