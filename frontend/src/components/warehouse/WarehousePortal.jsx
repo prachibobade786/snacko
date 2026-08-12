@@ -27,6 +27,7 @@ import useAppServices from "../../hooks/useAppServices";
 import * as api from "../../api/api";
 import logoImg from "../../assets/snackologo.png";
 import "./WarehousePortal.css";
+import CouponManager from "../admin/CouponManager";
 
 export default function WarehousePortal() {
   const {
@@ -43,7 +44,9 @@ export default function WarehousePortal() {
     fetchWarehouseOrders,
     adminInventory,
     stockEdits,
+    discountEdits,
     handleStockChange,
+    handleDiscountChange,
     handleSaveStock,
     adminPincodes,
     newPincode,
@@ -51,12 +54,21 @@ export default function WarehousePortal() {
     handleAddPincode,
     handleRemovePincode,
     handleUpdateOrderStatus,
+    handleUpdateWarehouse,
     showToast,
     categories,
     fetchCategories
   } = useAppServices();
 
-  const [portalTab, setPortalTab] = useState("packing"); // packing, dispatch, stock, pincodes
+  const [portalTab, setPortalTab] = useState("packing"); // packing, dispatch, stock, pincodes, history
+  const [currentTime, setCurrentTime] = useState(Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
   const [packingOrder, setPackingOrder] = useState(null);
   const [packingItems, setPackingItems] = useState([]);
   const [loadingItems, setLoadingItems] = useState(false);
@@ -80,6 +92,28 @@ export default function WarehousePortal() {
   const [riderPhone, setRiderPhone] = useState("");
   const [riderEta, setRiderEta] = useState("10");
 
+  // Warehouse operational configurations
+  const [whStartTime, setWhStartTime] = useState("06:00");
+  const [whEndTime, setWhEndTime] = useState("23:00");
+  const [whNameEdit, setWhNameEdit] = useState("");
+  const [whAddressEdit, setWhAddressEdit] = useState("");
+  const [whIsActive, setWhIsActive] = useState(true);
+
+  // Sync edit states when warehouse changes
+  useEffect(() => {
+    if (selectedAdminWH) {
+      const formatTimeToHHMM = (timeStr) => {
+        if (!timeStr) return "06:00";
+        return timeStr.slice(0, 5);
+      };
+      setWhStartTime(formatTimeToHHMM(selectedAdminWH.delivery_start_time));
+      setWhEndTime(formatTimeToHHMM(selectedAdminWH.delivery_end_time));
+      setWhNameEdit(selectedAdminWH.name || "");
+      setWhAddressEdit(selectedAdminWH.address || "");
+      setWhIsActive(selectedAdminWH.is_active !== 0);
+    }
+  }, [selectedAdminWH]);
+
   // Search & Filters for Inventory
   const [stockSearch, setStockSearch] = useState("");
   const [stockCategoryFilter, setStockCategoryFilter] = useState("All");
@@ -92,10 +126,12 @@ export default function WarehousePortal() {
 
   // Pagination for Incoming Orders Packing Queue
   const [packingPage, setPackingPage] = useState(1);
+  const [historyPage, setHistoryPage] = useState(1);
 
   // Reset page when warehouse changes
   useEffect(() => {
     setPackingPage(1);
+    setHistoryPage(1);
   }, [selectedAdminWH?.warehouse_id]);
 
   // Initial load
@@ -220,6 +256,25 @@ export default function WarehousePortal() {
     }
   };
 
+  // Cancel order directly from warehouse
+  const handleCancelOrder = async (orderId) => {
+    if (!window.confirm("Are you sure you want to cancel this order? This action cannot be undone.")) {
+      return;
+    }
+    try {
+      const data = await api.cancelOrder(token, orderId);
+      if (data.success) {
+        alert("Order cancelled successfully");
+        handleRefresh();
+      } else {
+        alert(data.message || "Failed to cancel order");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error cancelling order");
+    }
+  };
+
   // Toggle stock availability: quick commerce toggle
   const handleToggleStockStatus = async (productId, currentStock) => {
     if (!selectedAdminWH) return;
@@ -316,6 +371,12 @@ export default function WarehousePortal() {
   const readyDispatchOrders = warehouseOrders.filter(o => o.status === "processing");
   const outForDeliveryOrders = warehouseOrders.filter(o => o.status === "shipped");
   const completedOrders = warehouseOrders.filter(o => o.status === "delivered" || o.status === "cancelled");
+
+  // History Queue Pagination
+  const historyPerPage = 10;
+  const totalHistoryPages = Math.ceil(completedOrders.length / historyPerPage);
+  const historyStartIndex = (historyPage - 1) * historyPerPage;
+  const paginatedHistoryOrders = completedOrders.slice(historyStartIndex, historyStartIndex + historyPerPage);
 
   // Filter stock inventory
   const filteredInventory = adminInventory.filter(item => {
@@ -473,6 +534,18 @@ export default function WarehousePortal() {
           >
             📍 Delivery Coverage Areas
           </button>
+          <button
+            onClick={() => setPortalTab("history")}
+            className={`btn rounded-pill font-bold px-4 py-2 text-sm border-0 ${portalTab === "history" ? "btn-yellow text-white active" : "btn-secondary bg-white text-muted"}`}
+          >
+            📜 Order History & Cancellations ({completedOrders.length})
+          </button>
+          <button
+            onClick={() => setPortalTab("coupons")}
+            className={`btn rounded-pill font-bold px-4 py-2 text-sm border-0 ${portalTab === "coupons" ? "btn-yellow text-white active" : "btn-secondary bg-white text-muted"}`}
+          >
+            🎫 Promo Coupons Manager
+          </button>
         </div>
 
         {/* LOADING SCREEN */}
@@ -492,7 +565,7 @@ export default function WarehousePortal() {
                 <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
                   <h4 className="fw-extrabold text-dark mb-0">Incoming Orders Packing Queue</h4>
                   <span className="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3 py-1.5 font-bold">
-                    ⏱ Target: Pack in 90s
+                    ⏱ Limit: Pack in 180s
                   </span>
                 </div>
 
@@ -502,38 +575,65 @@ export default function WarehousePortal() {
                       <tr className="small text-muted font-bold">
                         <th className="py-3 px-3">Order ID</th>
                         <th className="py-3">Timestamp</th>
+                        <th className="py-3">Fulfillment Timer</th>
                         <th className="py-3">Address Pin</th>
                         <th className="py-3 text-end">Bill Amount</th>
                         <th className="py-3 text-end px-3">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="small">
-                      {paginatedPendingOrders.map(o => (
-                        <tr key={o.order_id} className="wh-order-row">
-                          <td className="px-3 fw-black text-dark">#{o.order_id}</td>
-                          <td className="text-muted">
-                            {new Date(o.order_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </td>
-                          <td>
-                            <span className="badge bg-light text-dark border px-2 py-1 font-bold">
-                              {o.shipping_pincode || "Serviced"}
-                            </span>
-                          </td>
-                          <td className="text-end fw-extrabold text-slate-800">₹{o.total_amount}</td>
-                          <td className="text-end px-3">
-                            <button
-                              onClick={() => handleOpenPackingChecklist(o)}
-                              className="btn btn-yellow btn-sm rounded-pill font-bold py-1.5 px-3"
-                              style={{ fontSize: "11px" }}
-                            >
-                              Start Packing
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                      {paginatedPendingOrders.map(o => {
+                        const timeElapsedMs = currentTime - new Date(o.order_date).getTime();
+                        const timeElapsedSec = Math.floor(timeElapsedMs / 1000);
+                        const remainingSec = 180 - timeElapsedSec;
+                        const isLate = remainingSec < 0;
+                        return (
+                          <tr key={o.order_id} className="wh-order-row">
+                            <td className="px-3 fw-black text-dark">#{o.order_id}</td>
+                            <td className="text-muted">
+                              {new Date(o.order_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </td>
+                            <td>
+                              {isLate ? (
+                                <span className="badge bg-danger text-white font-extrabold px-2.5 py-1 rounded shadow-sm">
+                                  🚨 Delayed by {Math.abs(remainingSec)}s
+                                </span>
+                              ) : (
+                                <span className="badge bg-info bg-opacity-10 text-info border border-info border-opacity-30 font-bold px-2 py-1 rounded">
+                                  ⏱ {remainingSec}s left
+                                </span>
+                              )}
+                            </td>
+                            <td>
+                              <span className="badge bg-light text-dark border px-2 py-1 font-bold">
+                                {o.shipping_pincode || "Serviced"}
+                              </span>
+                            </td>
+                            <td className="text-end fw-extrabold text-slate-800">₹{o.total_amount}</td>
+                            <td className="text-end px-3">
+                              <div className="d-flex justify-content-end gap-2">
+                                <button
+                                  onClick={() => handleOpenPackingChecklist(o)}
+                                  className="btn btn-yellow btn-sm rounded-pill font-bold py-1.5 px-3"
+                                  style={{ fontSize: "11px" }}
+                                >
+                                  Start Packing
+                                </button>
+                                <button
+                                  onClick={() => handleCancelOrder(o.order_id)}
+                                  className="btn btn-outline-danger btn-sm rounded-pill font-bold py-1.5 px-3"
+                                  style={{ fontSize: "11px" }}
+                                >
+                                  Cancel Order
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                       {pendingPackingOrders.length === 0 && (
                         <tr>
-                          <td colSpan="5" className="text-center text-muted py-5">
+                          <td colSpan="6" className="text-center text-muted py-5">
                             <div className="py-4">
                               <PackageCheck size={48} className="text-slate-300 mb-3" />
                               <p className="mb-0 font-bold">All orders packed! Standing by for new orders...</p>
@@ -800,10 +900,10 @@ export default function WarehousePortal() {
                 </button>
                 <button
                   onClick={handleSaveStock}
-                  disabled={Object.keys(stockEdits).length === 0}
+                  disabled={Object.keys(stockEdits).length === 0 && Object.keys(discountEdits).length === 0}
                   className="btn btn-primary rounded-pill font-bold px-4 py-2 text-white"
                 >
-                  Save Stock Edits ({Object.keys(stockEdits).length})
+                  Save Changes ({Object.keys(stockEdits).length + Object.keys(discountEdits).length})
                 </button>
               </div>
             </div>
@@ -844,6 +944,7 @@ export default function WarehousePortal() {
                     <th className="py-3 px-3">Product Name</th>
                     <th className="py-3">Category</th>
                     <th className="py-3">Price</th>
+                    <th className="py-3">Offer Price (₹)</th>
                     <th className="py-3 text-center">Status Toggle</th>
                     <th className="py-3 text-end px-3">Available Stock Quantity</th>
                   </tr>
@@ -873,6 +974,21 @@ export default function WarehousePortal() {
                         </td>
                         <td className="text-muted">{item.category_name}</td>
                         <td className="fw-bold text-slate-800">₹{item.price}</td>
+                        <td>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder="No active offer"
+                            className="form-control form-control-sm d-inline-block rounded-3 px-2 text-center"
+                            value={discountEdits[item.product_id] !== undefined ? (discountEdits[item.product_id] !== null ? discountEdits[item.product_id] : "") : (item.discount_price !== null ? item.discount_price : "")}
+                            onChange={(e) => {
+                              const val = e.target.value === "" ? "" : parseFloat(e.target.value);
+                              handleDiscountChange(item.product_id, val);
+                            }}
+                            style={{ maxWidth: "120px", border: "1.5px solid #e2e8f0", fontSize: "12px", height: "32px" }}
+                          />
+                        </td>
                         <td className="text-center">
                           <div className="form-check form-switch d-inline-block">
                             <input
@@ -958,6 +1074,80 @@ export default function WarehousePortal() {
         {/* TAB 4: DELIVERY PINCODES */}
         {portalTab === "pincodes" && selectedAdminWH && (
           <div className="card border-0 rounded-4 p-4 shadow-sm bg-white animate-fade-in">
+            {/* Operational Timings & General Settings Form */}
+            <div className="border-bottom pb-4 mb-4">
+              <h4 className="fw-extrabold text-dark mb-1">Fulfillment Center Operating Timings</h4>
+              <p className="text-muted text-xs mb-3">Adjust your dark store's active quick-commerce delivery hours and store properties.</p>
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                const res = await handleUpdateWarehouse(
+                  selectedAdminWH.warehouse_id, 
+                  whNameEdit, 
+                  whAddressEdit, 
+                  whStartTime ? `${whStartTime}:00` : "06:00:00", 
+                  whEndTime ? `${whEndTime}:00` : "23:00:00",
+                  whIsActive
+                );
+              }} className="row g-3">
+                <div className="col-12 col-md-6">
+                  <label className="form-label small fw-bold">Dark Store Name</label>
+                  <input 
+                    type="text" 
+                    required
+                    className="form-control rounded-3 py-2 text-xs font-semibold text-slate-800"
+                    value={whNameEdit}
+                    onChange={(e) => setWhNameEdit(e.target.value)}
+                  />
+                </div>
+                <div className="col-12 col-md-6">
+                  <label className="form-label small fw-bold">Physical Address</label>
+                  <input 
+                    type="text" 
+                    required
+                    className="form-control rounded-3 py-2 text-xs font-semibold text-slate-800"
+                    value={whAddressEdit}
+                    onChange={(e) => setWhAddressEdit(e.target.value)}
+                  />
+                </div>
+                <div className="col-6 col-md-4">
+                  <label className="form-label small fw-bold">Deliveries Start Hour</label>
+                  <input 
+                    type="time" 
+                    required
+                    className="form-control rounded-3 py-2 text-xs font-semibold text-slate-800"
+                    value={whStartTime}
+                    onChange={(e) => setWhStartTime(e.target.value)}
+                  />
+                </div>
+                <div className="col-6 col-md-4">
+                  <label className="form-label small fw-bold">Last Delivery Completion Hour</label>
+                  <input 
+                    type="time" 
+                    required
+                    className="form-control rounded-3 py-2 text-xs font-semibold text-slate-800"
+                    value={whEndTime}
+                    onChange={(e) => setWhEndTime(e.target.value)}
+                  />
+                </div>
+                <div className="col-12 col-md-4">
+                  <label className="form-label small fw-bold">Operational Status</label>
+                  <select 
+                    disabled
+                    className="form-select rounded-3 py-2 text-xs font-semibold bg-light text-muted"
+                    value={whIsActive ? "1" : "0"}
+                  >
+                    <option value="1">🟢 Active / Open (Admin Managed)</option>
+                    <option value="0">🔴 Inactive / Closed (Admin Managed)</option>
+                  </select>
+                </div>
+                <div className="col-12 mt-3">
+                  <button type="submit" className="btn btn-warning w-100 rounded-3 text-xs font-bold text-white py-2 shadow-sm">
+                    Save Config
+                  </button>
+                </div>
+              </form>
+            </div>
+
             <div className="mb-4">
               <h4 className="fw-extrabold text-dark mb-1">Served Pincode Links</h4>
               <p className="text-muted text-xs">Only customers residing in these pincodes will be served by {selectedAdminWH.name}.</p>
@@ -1003,6 +1193,126 @@ export default function WarehousePortal() {
                 </button>
               </form>
             </div>
+          </div>
+        )}
+
+        {/* TAB 5: COMPLETED & CANCELLED ORDERS HISTORY */}
+        {portalTab === "history" && (
+          <div className="row g-4 animate-fade-in">
+            <div className="col-12">
+              <div className="card border-0 rounded-4 p-4 shadow-sm bg-white">
+                <h4 className="fw-extrabold text-dark mb-4">Completed & Cancelled Orders History</h4>
+                <div className="table-responsive">
+                  <table className="table table-hover align-middle">
+                    <thead className="table-light text-secondary text-xs uppercase font-bold">
+                      <tr>
+                        <th>Order ID</th>
+                        <th>Customer</th>
+                        <th>Pincode</th>
+                        <th>Total Amount</th>
+                        <th>Payment & Refund</th>
+                        <th>Order Date</th>
+                        <th>Delivery Partner</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="text-sm">
+                      {paginatedHistoryOrders.map(o => (
+                        <tr key={o.order_id}>
+                          <td className="font-extrabold text-dark">#{o.order_id}</td>
+                          <td>
+                            <div className="font-bold text-dark">{o.name}</div>
+                            <div className="text-muted text-xs">{o.email}</div>
+                          </td>
+                          <td>{o.shipping_pincode}</td>
+                          <td className="font-extrabold text-slate-800">₹{o.total_amount}</td>
+                          <td>
+                            <div className="d-flex flex-column text-xs">
+                              <span className="font-extrabold text-slate-700">
+                                {o.payment_method === 'RAZORPAY' ? '💳 RAZORPAY' : '💵 COD'}
+                              </span>
+                              <span className={`badge mt-1 align-self-start font-bold text-[10px] px-2 py-0.5 rounded ${o.payment_status === 'REFUNDED' ? 'bg-danger bg-opacity-10 text-danger' :
+                                  o.payment_status === 'COMPLETED' ? 'bg-success bg-opacity-10 text-success' :
+                                    'bg-warning bg-opacity-10 text-warning'
+                                }`}>
+                                {o.payment_status || 'PENDING'}
+                              </span>
+                              {o.payment_status === 'REFUNDED' && o.transaction_id && (
+                                <span className="text-[10px] text-muted font-mono mt-1 font-semibold truncate max-w-[120px]" title={o.transaction_id}>
+                                  Ref: {o.transaction_id}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="text-xs text-muted">
+                            {new Date(o.order_date).toLocaleDateString()} at {new Date(o.order_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </td>
+                          <td>
+                            {o.delivery_partner_name ? (
+                              <div>
+                                <span className="font-bold">{o.delivery_partner_name}</span>
+                                <span className="text-muted text-xs d-block">{o.delivery_partner_phone}</span>
+                              </div>
+                            ) : (
+                              <span className="text-xs italic text-muted">Not Assigned</span>
+                            )}
+                          </td>
+                          <td>
+                            <span className={`badge px-2.5 py-1.5 rounded-pill text-xs font-bold ${o.status === 'cancelled' ? 'bg-danger bg-opacity-10 text-danger' : 'bg-success bg-opacity-10 text-success'
+                              }`}>
+                              {o.status.toUpperCase()}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                      {completedOrders.length === 0 && (
+                        <tr>
+                          <td colSpan="8" className="text-center py-5 text-muted italic">
+                            No completed or cancelled orders in this fulfillment center.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination Controls */}
+                {totalHistoryPages > 1 && (
+                  <div className="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
+                    <span className="text-muted text-xs">
+                      Showing {historyStartIndex + 1}-{Math.min(historyStartIndex + historyPerPage, completedOrders.length)} of {completedOrders.length} orders
+                    </span>
+                    <div className="d-flex gap-2">
+                      <button
+                        disabled={historyPage === 1}
+                        onClick={() => setHistoryPage(prev => Math.max(prev - 1, 1))}
+                        className="btn btn-outline-secondary btn-xs rounded-pill px-3 py-1 font-bold"
+                        style={{ fontSize: "11px", opacity: historyPage === 1 ? 0.5 : 1 }}
+                      >
+                        Previous
+                      </button>
+                      <span className="text-dark font-bold align-self-center px-1 text-xs">
+                        Page {historyPage} of {totalHistoryPages}
+                      </span>
+                      <button
+                        disabled={historyPage === totalHistoryPages}
+                        onClick={() => setHistoryPage(prev => Math.min(prev + 1, totalHistoryPages))}
+                        className="btn btn-outline-secondary btn-xs rounded-pill px-3 py-1 font-bold"
+                        style={{ fontSize: "11px", opacity: historyPage === totalHistoryPages ? 0.5 : 1 }}
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {portalTab === "coupons" && (
+          <div className="card border-0 rounded-4 p-4 shadow-sm bg-white">
+            <CouponManager token={token} />
           </div>
         )}
       </div>
