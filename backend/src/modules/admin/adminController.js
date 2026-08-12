@@ -1,5 +1,3 @@
-
-
 const adminService = require("./adminServices");
 
 const getDashboardStats = async (req, res) => {
@@ -161,12 +159,45 @@ const updateOrderStatus = async (req, res) => {
   }
 };
 
+const createWarehouseUser = async (req, res) => {
+  try {
+    const { name, email, password, mobile, warehouse_id } = req.body;
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Name, email, and password are required"
+      });
+    }
+
+    // Check if email already exists
+    const [existing] = await require("../../config/db").query("SELECT id FROM users WHERE email = ?", [email]);
+    if (existing.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is already registered"
+      });
+    }
+
+    await adminService.createWarehouseUser({ name, email, password, mobile, warehouse_id });
+    res.status(201).json({
+      success: true,
+      message: "Warehouse user created successfully"
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to create warehouse user"
+    });
+  }
+};
+
 module.exports = {
   getDashboardStats,
   getCategoryRevenue,
   listUsers,
   updateUserRole,
   deleteUser,
+  createWarehouseUser,
   listOrders,
   getOrderDetails,
   updateOrderStatus

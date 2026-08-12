@@ -1,14 +1,14 @@
 const adminModel = require("./adminModel");
 
-// Get aggregated statistics for the dashboard
 const getDashboardStats = async () => {
-  const [totalSales, totalOrders, totalCustomers, totalProducts, outOfStock, lowStock] = await Promise.all([
+  const [totalSales, totalOrders, totalCustomers, totalProducts, outOfStock, lowStock, warehouseStats] = await Promise.all([
     adminModel.getTotalSales(),
     adminModel.getTotalOrdersCount(),
     adminModel.getTotalCustomersCount(),
     adminModel.getTotalProductsCount(),
     adminModel.getOutOfStockCount(),
-    adminModel.getLowStockCount()
+    adminModel.getLowStockCount(),
+    adminModel.getWarehouseStats()
   ]);
 
   return {
@@ -20,7 +20,8 @@ const getDashboardStats = async () => {
       outOfStock,
       lowStock,
       inStock: totalProducts - outOfStock
-    }
+    },
+    warehouseStats
   };
 };
 
@@ -138,12 +139,22 @@ const updateOrderStatus = async (orderId, status, deliveryInfo = {}) => {
   return true;
 };
 
+const createWarehouseUser = async (user) => {
+  const bcrypt = require("bcryptjs");
+  const hashedPassword = await bcrypt.hash(user.password, 10);
+  return await adminModel.createWarehouseUser({
+    ...user,
+    password: hashedPassword
+  });
+};
+
 module.exports = {
   getDashboardStats,
   getCategoryRevenue,
   listUsers,
   updateUserRole,
   deleteUser,
+  createWarehouseUser,
   listOrders,
   getOrderDetails,
   updateOrderStatus
