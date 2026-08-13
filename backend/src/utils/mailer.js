@@ -186,8 +186,51 @@ const sendOrderConfirmationEmail = async (orderId, userEmail, userName, amount, 
   return sendEmail({ to: userEmail, subject, text, html });
 };
 
+const sendOrderCancellationEmail = async (orderId, userEmail, userName, amount) => {
+  const subject = `Order Cancelled! #${orderId} - Snacko Delivery ❌`;
+  
+  const text = `Hi ${userName},\n\nYour order #${orderId} has been cancelled.\n\nRefund Details:\nTotal Amount: ₹${amount}\nIf this was a prepaid order, the refund has been initiated to your original payment method.\n\nThank you,\nTeam Snacko`;
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
+      <div style="text-align: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 15px; margin-bottom: 20px;">
+        <span style="color: #ef4444; font-size: 28px; font-weight: bold;">Snacko</span>
+        <h2 style="color: #1e293b; margin: 5px 0 0 0; font-size: 18px;">Order Cancelled</h2>
+      </div>
+      
+      <p style="font-size: 15px; color: #334155; line-height: 1.6;">Hi <strong>${userName}</strong>,</p>
+      <p style="font-size: 15px; color: #334155; line-height: 1.6;">
+        Your order <strong>#${orderId}</strong> has been cancelled successfully.
+      </p>
+
+      <div style="background-color: #f8fafc; border-radius: 8px; padding: 15px; margin: 20px 0;">
+        <div style="font-size: 13px; color: #64748b; margin-bottom: 4px;">ORDER ID</div>
+        <div style="font-size: 16px; font-weight: bold; color: #0f172a; margin-bottom: 12px;">#${orderId}</div>
+        
+        <div style="font-size: 13px; color: #64748b; margin-bottom: 4px;">REFUNDED AMOUNT</div>
+        <div style="font-size: 16px; font-weight: bold; color: #ef4444; margin-bottom: 12px;">₹${amount}</div>
+
+        <div style="font-size: 13px; color: #64748b; margin-bottom: 4px;">STATUS</div>
+        <div style="font-size: 14px; font-weight: bold; color: #ef4444;">Cancelled & Refund Initiated (prepaid only)</div>
+      </div>
+
+      <p style="font-size: 14px; color: #475569; line-height: 1.6;">
+        If you have paid using Razorpay, the refunded amount has been processed back to your original source of payment. For COD orders, no amount will be collected.
+      </p>
+
+      <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 30px 0;" />
+      <p style="font-size: 12px; color: #64748b; text-align: center; margin: 0;">
+        If you have any questions, please reach out to our customer support.
+      </p>
+    </div>
+  `;
+
+  return sendEmail({ to: userEmail, subject, text, html });
+};
+
 module.exports = {
   sendWelcomeEmail,
   sendPasswordResetEmail,
   sendOrderConfirmationEmail,
+  sendOrderCancellationEmail,
 };
