@@ -3,30 +3,86 @@ const fs = require("fs");
 const path = require("path");
 require("dotenv").config();
 
-const initDb = async () => {
-  const connectionConfig = {
+function getConnectionConfig() {
+  const dbUrl = process.env.DATABASE_URL || process.env.MYSQL_URL;
+  if (dbUrl) {
+    const url = require("url");
+    const params = url.parse(dbUrl);
+    const auth = params.auth ? params.auth.split(":") : [];
+    const config = {
+      host: params.hostname,
+      port: params.port ? parseInt(params.port, 10) : 3306,
+      user: auth[0],
+      password: auth[1],
+      database: params.pathname ? params.pathname.replace(/^\//, "") : undefined,
+    };
+    if (process.env.DB_SSL === "true") {
+      config.ssl = { rejectUnauthorized: false };
+    }
+    return config;
+  }
+
+  const config = {
     host: process.env.DB_HOST || "localhost",
     user: process.env.DB_USER || "root",
-    password: process.env.DB_PASSWORD || "manager"
+    password: process.env.DB_PASSWORD || "manager",
+    database: process.env.DB_NAME || "snacko",
+    port: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : 3306,
   };
+  if (process.env.DB_SSL === "true") {
+    config.ssl = { rejectUnauthorized: false };
+  }
+  return config;
+}
+
+const initDb = async () => {
+  const baseConfig = getConnectionConfig();
+  const dbName = baseConfig.database || process.env.DB_NAME || "snacko";
+
+  // Create connection config without database name for the creation step
+  const connectionConfig = { ...baseConfig };
+  delete connectionConfig.database;
 
   let connection;
   try {
-    // 1. Connect to MySQL server without database
-    connection = await mysql.createConnection(connectionConfig);
-    console.log("Connected to MySQL server. Checking/creating database...");
+    // 1. Try to connect directly to the target database first
+    try {
+      console.log(`Connecting directly to database "${dbName}"...`);
+      connection = await mysql.createConnection({
+        ...baseConfig,
+        database: dbName,
+        multipleStatements: true
+      });
+      console.log(`Successfully connected directly to database "${dbName}".`);
+    } catch (directConnError) {
+      console.log(`Direct connection to database "${dbName}" failed: ${directConnError.message}`);
+      console.log("Trying to connect without database to check/create it...");
 
-    const dbName = process.env.DB_NAME || "snacko";
-    await connection.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\``);
-    console.log(`Database "${dbName}" verified or created.`);
-    await connection.end();
+      try {
+        // Connect to MySQL server without database
+        connection = await mysql.createConnection({
+          ...connectionConfig,
+          multipleStatements: true
+        });
+        console.log("Connected to MySQL server. Checking/creating database...");
+        await connection.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\``);
+        console.log(`Database "${dbName}" verified or created.`);
+        await connection.end();
+      } catch (dbCreateError) {
+        console.warn(`Warning: Could not create database "${dbName}" globally: ${dbCreateError.message}`);
+        console.warn("This is normal on managed database hosting where databases are pre-created. Attempting to proceed by connecting directly...");
+        if (connection) {
+          try { await connection.end(); } catch (e) {}
+        }
+      }
 
-    // 2. Connect to the specific database
-    connection = await mysql.createConnection({
-      ...connectionConfig,
-      database: dbName,
-      multipleStatements: true // Enable for executing migration script
-    });
+      // Reconnect directly to the target database
+      connection = await mysql.createConnection({
+        ...baseConfig,
+        database: dbName,
+        multipleStatements: true
+      });
+    }
 
     // Check if tables already exist by checking if 'users' table exists
     const [tables] = await connection.query("SHOW TABLES LIKE 'users'");
