@@ -16,11 +16,13 @@ import {
   Calendar,
   CheckCircle,
   XCircle,
-  Truck
+  Truck,
+  Ticket
 } from "lucide-react";
 import logoImg from "../../assets/snackologo.png";
 import useAppServices from "../../hooks/useAppServices";
 import "./AdminPanel.css";
+import CouponManager from "./CouponManager";
 
 export default function AdminPanel() {
   const {
@@ -41,6 +43,7 @@ export default function AdminPanel() {
     fetchAdminWarehouses,
     selectWarehouseForAdmin,
     handleCreateWarehouse,
+    handleUpdateWarehouse,
     handleAddPincode,
     handleRemovePincode,
     handleStockChange,
@@ -62,7 +65,8 @@ export default function AdminPanel() {
     handleUpdateOrderStatus,
     handleLogout,
     setMode,
-    user
+    user,
+    token
   } = useAppServices();
 
   const [localSearch, setLocalSearch] = useState("");
@@ -81,6 +85,28 @@ export default function AdminPanel() {
   const [riderPhoneInput, setRiderPhoneInput] = useState("");
   const [riderEtaInput, setRiderEtaInput] = useState("15");
 
+  // Warehouse configuration edit states
+  const [whStartTime, setWhStartTime] = useState("06:00");
+  const [whEndTime, setWhEndTime] = useState("23:00");
+  const [whNameEdit, setWhNameEdit] = useState("");
+  const [whAddressEdit, setWhAddressEdit] = useState("");
+  const [whIsActive, setWhIsActive] = useState(true);
+
+  // Sync edit states when warehouse changes
+  useEffect(() => {
+    if (selectedAdminWH) {
+      const formatTimeToHHMM = (timeStr) => {
+        if (!timeStr) return "06:00";
+        return timeStr.slice(0, 5);
+      };
+      setWhStartTime(formatTimeToHHMM(selectedAdminWH.delivery_start_time));
+      setWhEndTime(formatTimeToHHMM(selectedAdminWH.delivery_end_time));
+      setWhNameEdit(selectedAdminWH.name || "");
+      setWhAddressEdit(selectedAdminWH.address || "");
+      setWhIsActive(selectedAdminWH.is_active !== 0);
+    }
+  }, [selectedAdminWH]);
+
   // Fetch warehouses on mount so dropdown selections are populated
   useEffect(() => {
     fetchAdminWarehouses();
@@ -88,7 +114,9 @@ export default function AdminPanel() {
 
   // Load appropriate data when tab or parameters change
   useEffect(() => {
-    if (adminTab === "customer_users" || adminTab === "warehouse_users" || adminTab === "users") {
+    if (adminTab === "dashboard") {
+      fetchAdminDashboardStats();
+    } else if (adminTab === "customer_users" || adminTab === "warehouse_users" || adminTab === "users") {
       fetchAdminUsersList();
     } else if (adminTab === "pincodes" && selectedAdminWH) {
       selectWarehouseForAdmin(selectedAdminWH);
@@ -102,7 +130,9 @@ export default function AdminPanel() {
   };
 
   const handleRefresh = () => {
-    if (adminTab === "customer_users" || adminTab === "warehouse_users" || adminTab === "users") {
+    if (adminTab === "dashboard") {
+      fetchAdminDashboardStats();
+    } else if (adminTab === "customer_users" || adminTab === "warehouse_users" || adminTab === "users") {
       fetchAdminUsersList();
     } else if (adminTab === "pincodes" && selectedAdminWH) {
       selectWarehouseForAdmin(selectedAdminWH);
@@ -141,6 +171,14 @@ export default function AdminPanel() {
 
           <nav className="nav flex-column gap-1.5">
             <button 
+              onClick={() => setAdminTab("dashboard")}
+              className={`nav-link text-start d-flex align-items-center gap-2.5 ${adminTab === "dashboard" ? "active" : ""}`}
+            >
+              <LayoutDashboard size={18} />
+              <span>Dashboard</span>
+            </button>
+
+            <button 
               onClick={() => setAdminTab("customer_users")}
               className={`nav-link text-start d-flex align-items-center gap-2.5 ${adminTab === "customer_users" ? "active" : ""}`}
             >
@@ -162,6 +200,14 @@ export default function AdminPanel() {
             >
               <MapPin size={18} />
               <span>Pincode Coverage</span>
+            </button>
+
+            <button 
+              onClick={() => setAdminTab("coupons")}
+              className={`nav-link text-start d-flex align-items-center gap-2.5 ${adminTab === "coupons" ? "active" : ""}`}
+            >
+              <Ticket size={18} />
+              <span>Manage Coupons</span>
             </button>
           </nav>
         </div>
@@ -228,8 +274,132 @@ export default function AdminPanel() {
           </div>
         ) : (
           <div className="flex-grow-1">
-            
+            {/* Dashboard Statistics Tab Panel */}
+            {adminTab === "dashboard" && (
+              <div className="fade-in d-flex flex-column gap-4">
+                {/* General Stats Tiles */}
+                <div className="row g-3">
+                  <div className="col-12 col-sm-6 col-xl-3">
+                    <div className="card admin-stat-card border-0 p-4 shadow-sm bg-white rounded-4 position-relative overflow-hidden">
+                      <span className="text-muted font-bold text-xs uppercase d-block mb-1">Total Sales</span>
+                      <h2 className="mb-0 font-extrabold text-dark">₹{(adminStats?.totalSales || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h2>
+                      <div className="position-absolute opacity-10 text-primary" style={{ bottom: 15, right: 20 }}>
+                        <ShoppingBag size={48} style={{ color: "#ff6500" }} />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="col-12 col-sm-6 col-xl-3">
+                    <div className="card admin-stat-card border-0 p-4 shadow-sm bg-white rounded-4 position-relative overflow-hidden">
+                      <span className="text-muted font-bold text-xs uppercase d-block mb-1">Total Orders</span>
+                      <h2 className="mb-0 font-extrabold text-dark">{adminStats?.totalOrders || 0}</h2>
+                      <div className="position-absolute opacity-10 text-primary" style={{ bottom: 15, right: 20 }}>
+                        <ShoppingBag size={48} style={{ color: "#3b82f6" }} />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="col-12 col-sm-6 col-xl-3">
+                    <div className="card admin-stat-card border-0 p-4 shadow-sm bg-white rounded-4 position-relative overflow-hidden">
+                      <span className="text-muted font-bold text-xs uppercase d-block mb-1">Total Customers</span>
+                      <h2 className="mb-0 font-extrabold text-dark">{adminStats?.totalCustomers || 0}</h2>
+                      <div className="position-absolute opacity-10 text-primary" style={{ bottom: 15, right: 20 }}>
+                        <Users size={48} style={{ color: "#10b981" }} />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="col-12 col-sm-6 col-xl-3">
+                    <div className="card admin-stat-card border-0 p-4 shadow-sm bg-white rounded-4 position-relative overflow-hidden">
+                      <span className="text-muted font-bold text-xs uppercase d-block mb-1">Products Catalog</span>
+                      <h2 className="mb-0 font-extrabold text-dark">{adminStats?.totalProducts || 0}</h2>
+                      <div className="position-absolute opacity-10 text-primary" style={{ bottom: 15, right: 20 }}>
+                        <Package size={48} style={{ color: "#8b5cf6" }} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
+                {/* Stock Warning Alert Block */}
+                {(adminStats?.stockStatus?.outOfStock > 0 || adminStats?.stockStatus?.lowStock > 0) && (
+                  <div className="card border-0 rounded-4 p-3 shadow-sm bg-warning bg-opacity-10 border-start border-warning border-3 d-flex flex-row align-items-center gap-3">
+                    <ShieldAlert className="text-warning flex-shrink-0" size={24} />
+                    <div>
+                      <span className="fw-bold text-dark d-block">Inventory Attention Required</span>
+                      <span className="text-muted small">
+                        There are <strong className="text-danger">{adminStats?.stockStatus?.outOfStock || 0}</strong> products out of stock and <strong className="text-warning">{adminStats?.stockStatus?.lowStock || 0}</strong> products running low on stock across warehouses.
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Warehouse-Wise Statistics Table */}
+                <div className="card border-0 rounded-4 p-4 shadow-sm bg-white">
+                  <div className="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                      <h4 className="fw-extrabold text-dark mb-1">Warehouse Performance Statistics</h4>
+                      <p className="text-muted small mb-0">Sales and order volumes segmented by physical dark store location</p>
+                    </div>
+                  </div>
+
+                  <div className="table-responsive">
+                    <table className="table table-hover align-middle mb-0">
+                      <thead className="table-light">
+                        <tr className="small text-muted font-bold text-uppercase" style={{ fontSize: "11px", letterSpacing: "0.5px" }}>
+                          <th className="py-3 px-3">Dark Store / Warehouse</th>
+                          <th className="py-3 text-center bg-light bg-opacity-50">Today's Orders</th>
+                          <th className="py-3 text-center bg-light bg-opacity-50 border-end">Today's Sales</th>
+                          <th className="py-3 text-center">Weekly Orders</th>
+                          <th className="py-3 text-center border-end">Weekly Sales</th>
+                          <th className="py-3 text-center bg-light bg-opacity-50">Monthly Orders</th>
+                          <th className="py-3 text-center bg-light bg-opacity-50">Monthly Sales</th>
+                        </tr>
+                      </thead>
+                      <tbody className="small">
+                        {adminStats?.warehouseStats?.map((wh) => (
+                          <tr key={wh.warehouse_id} className="align-middle">
+                            <td className="px-3 py-3.5">
+                              <div className="d-flex align-items-center gap-2">
+                                <div className="admin-avatar text-uppercase bg-primary bg-opacity-10 text-primary" style={{ width: "32px", height: "32px", fontSize: "11px", boxShadow: "none" }}>
+                                  {wh.warehouse_name ? wh.warehouse_name.slice(0, 2) : "WH"}
+                                </div>
+                                <div>
+                                  <span className="fw-bold text-dark d-block">{wh.warehouse_name}</span>
+                                  <span className="text-muted text-xs">ID: {wh.warehouse_id}</span>
+                                </div>
+                              </div>
+                            </td>
+                            {/* Today */}
+                            <td className="text-center py-3 bg-light bg-opacity-50 fw-semibold text-dark">
+                              {wh.today_order_count}
+                            </td>
+                            <td className="text-center py-3 bg-light bg-opacity-50 border-end fw-bold text-primary">
+                              ₹{Number(wh.today_order_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </td>
+                            {/* Week */}
+                            <td className="text-center py-3 fw-semibold text-dark">
+                              {wh.week_order_count}
+                            </td>
+                            <td className="text-center py-3 border-end fw-bold text-primary">
+                              ₹{Number(wh.week_order_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </td>
+                            {/* Month */}
+                            <td className="text-center py-3 bg-light bg-opacity-50 fw-semibold text-dark">
+                              {wh.month_order_count}
+                            </td>
+                            <td className="text-center py-3 bg-light bg-opacity-50 fw-bold text-primary">
+                              ₹{Number(wh.month_order_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </td>
+                          </tr>
+                        ))}
+                        {(!adminStats?.warehouseStats || adminStats.warehouseStats.length === 0) && (
+                          <tr>
+                            <td colSpan="7" className="text-center text-muted py-4">No warehouse data available.</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* 1. PANEL: CUSTOMER USERS */}
             {adminTab === "customer_users" && (
@@ -506,6 +676,80 @@ export default function AdminPanel() {
                         )}
                       </div>
 
+                      {/* Operational Timings & General Settings Form */}
+                      <div className="border-top pt-4 mb-4">
+                        <h5 className="fw-bold text-dark mb-1">Store Operational settings & Timings</h5>
+                        <p className="text-muted text-xs mb-3">Configure active delivery operating hours and physical storefront details</p>
+                        <form onSubmit={async (e) => {
+                          e.preventDefault();
+                          const res = await handleUpdateWarehouse(
+                            selectedAdminWH.warehouse_id, 
+                            whNameEdit, 
+                            whAddressEdit, 
+                            whStartTime ? `${whStartTime}:00` : "06:00:00", 
+                            whEndTime ? `${whEndTime}:00` : "23:00:00",
+                            whIsActive
+                          );
+                        }} className="row g-3">
+                          <div className="col-12 col-md-6">
+                            <label className="form-label small fw-bold">Fulfillment Center Name</label>
+                            <input 
+                              type="text" 
+                              required
+                              className="form-control rounded-3 py-2 text-xs font-semibold text-slate-800"
+                              value={whNameEdit}
+                              onChange={(e) => setWhNameEdit(e.target.value)}
+                            />
+                          </div>
+                          <div className="col-12 col-md-6">
+                            <label className="form-label small fw-bold">Physical Address</label>
+                            <input 
+                              type="text" 
+                              required
+                              className="form-control rounded-3 py-2 text-xs font-semibold text-slate-800"
+                              value={whAddressEdit}
+                              onChange={(e) => setWhAddressEdit(e.target.value)}
+                            />
+                          </div>
+                          <div className="col-6 col-md-4">
+                            <label className="form-label small fw-bold">Deliveries Start Hour</label>
+                            <input 
+                              type="time" 
+                              required
+                              className="form-control rounded-3 py-2 text-xs font-semibold text-slate-800"
+                              value={whStartTime}
+                              onChange={(e) => setWhStartTime(e.target.value)}
+                            />
+                          </div>
+                          <div className="col-6 col-md-4">
+                            <label className="form-label small fw-bold">Last Delivery Completion Hour</label>
+                            <input 
+                              type="time" 
+                              required
+                              className="form-control rounded-3 py-2 text-xs font-semibold text-slate-800"
+                              value={whEndTime}
+                              onChange={(e) => setWhEndTime(e.target.value)}
+                            />
+                          </div>
+                          <div className="col-12 col-md-4">
+                            <label className="form-label small fw-bold">Operational Status</label>
+                            <select 
+                              className="form-select rounded-3 py-2 text-xs font-semibold text-slate-800"
+                              value={whIsActive ? "1" : "0"}
+                              onChange={(e) => setWhIsActive(e.target.value === "1")}
+                            >
+                              <option value="1">🟢 Active / Open</option>
+                              <option value="0">🔴 Inactive / Closed</option>
+                            </select>
+                          </div>
+                          <div className="col-12 mt-3">
+                            <button type="submit" className="btn btn-warning w-100 rounded-3 text-xs font-bold text-white py-2 shadow-sm">
+                              Save Configuration
+                            </button>
+                          </div>
+                        </form>
+                      </div>
+
                       {/* Add Pincode Link Form */}
                       <div className="border-t pt-4">
                         <h5 className="fw-bold text-dark mb-3">Link New Pincode</h5>
@@ -571,6 +815,10 @@ export default function AdminPanel() {
                   </form>
                 </div>
               </div>
+            )}
+
+            {adminTab === "coupons" && (
+              <CouponManager token={token} />
             )}
           </div>
         )}

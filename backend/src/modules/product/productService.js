@@ -30,11 +30,17 @@ const deleteProduct = (productId, callback) => {
   productModel.deleteProduct(productId, callback);
 };
 
+// update product offer price
+const updateProductOffer = (productId, discountPrice, callback) => {
+  productModel.updateProductOffer(productId, discountPrice, callback);
+};
+
 module.exports = {
   addProduct,
   getAllProducts,
   getProductById,
   getProductsByCategoryId,
   updateProduct,
-  deleteProduct
+  deleteProduct,
+  updateProductOffer
 };

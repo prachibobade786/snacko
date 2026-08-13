@@ -523,6 +523,14 @@
   transform: translateY(-1px);
 }
 
+.order-cancel-btn:disabled {
+  border-color: #cbd5e1;
+  color: #94a3b8;
+  background-color: #f8fafc;
+  cursor: not-allowed;
+  transform: none;
+}
+
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }

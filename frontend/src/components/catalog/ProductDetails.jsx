@@ -165,6 +165,8 @@ export default function ProductDetails() {
 
   // Resolve the live product from catalog state to keep stock reactive
   const product = products.find(p => p.product_id === selectedProduct.product_id) || selectedProduct;
+  const hasDiscount = product.discount_price !== null && parseFloat(product.discount_price) < parseFloat(product.price);
+  const activePrice = hasDiscount ? parseFloat(product.discount_price) : parseFloat(product.price);
 
   // Check if item is in cart
   const cartItem = cart.find((item) => item.product.product_id === product.product_id);
@@ -231,12 +233,19 @@ export default function ProductDetails() {
               {product.product_description || "Indulge in our carefully selected snacks, guaranteed to deliver high-quality taste and freshness directly to your doorstep in minutes."}
             </p>
 
-            <div className="details-price-row">
-              <span className="details-price-val">₹{product.price}</span>
-              <span className={`details-stock-badge ${isOutOfStock ? "out" : "in"}`}>
-                {isOutOfStock ? "Out of Stock" : `In Stock (${product.stock_quantity} units)`}
-              </span>
-            </div>
+             <div className="details-price-row">
+               <div className="d-flex align-items-baseline gap-2">
+                 <span className="details-price-val">₹{activePrice}</span>
+                 {hasDiscount && (
+                   <span className="text-decoration-line-through text-slate-400 font-semibold" style={{ fontSize: "16px" }}>
+                     ₹{product.price}
+                   </span>
+                 )}
+               </div>
+               <span className={`details-stock-badge ${isOutOfStock ? "out" : "in"}`}>
+                 {isOutOfStock ? "Out of Stock" : `In Stock (${product.stock_quantity} units)`}
+               </span>
+             </div>
 
             {/* Cart Button Adjuster & Place Order Button */}
             <div className="details-action-row flex gap-3">
@@ -251,6 +260,8 @@ export default function ProductDetails() {
                   <span className="details-quantity-val">{quantityInCart}</span>
                   <button 
                     onClick={() => updateCartQuantity(product.product_id, 1)}
+                    disabled={quantityInCart >= 4}
+                    title={quantityInCart >= 4 ? "Maximum 4 units allowed" : ""}
                     className="details-quantity-btn"
                   >
                     <Plus size={14} />

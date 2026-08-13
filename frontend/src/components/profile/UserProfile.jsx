@@ -30,6 +30,7 @@ export default function UserProfile({ token, user, setUser, showToast }) {
   const [expandedOrder, setExpandedOrder] = useState(null); // orderId
   const [orderItemsMap, setOrderItemsMap] = useState({}); // { orderId: [items] }
   const [ordersPage, setOrdersPage] = useState(1);
+  const [currentTime, setCurrentTime] = useState(Date.now());
 
   const ordersPerPage = 10;
   const totalPages = Math.ceil(orders.length / ordersPerPage);
@@ -97,6 +98,79 @@ export default function UserProfile({ token, user, setUser, showToast }) {
       fetchOrders();
     }
   }, [activeSubTab]);
+
+  // Keep current time updated for cancellation timers
+  useEffect(() => {
+    if (activeSubTab === "orders" && orders.length > 0) {
+      const timer = setInterval(() => {
+        setCurrentTime(Date.now());
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [activeSubTab, orders]);
+
+  // Autofill address details using Geolocation & Reverse Geocoding
+  const handleDetectAddress = () => {
+    if (!navigator.geolocation) {
+      showToast("Geolocation is not supported by your browser", "error");
+      return;
+    }
+    showToast("Detecting your location coordinates...", "info");
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`, {
+            headers: {
+              "User-Agent": "SnackoLocationApp/1.0"
+            }
+          });
+          const data = await res.json();
+          if (data && data.address) {
+            const addr = data.address;
+            
+            // Build address lines
+            const road = addr.road || addr.suburb || addr.neighbourhood || "";
+            const neighbourhood = addr.neighbourhood || addr.suburb || "";
+            const houseNum = addr.house_number || "";
+            const line1 = houseNum ? `${houseNum}, ${road}`.trim() : road;
+            const line2 = neighbourhood !== road ? neighbourhood : "";
+            
+            const city = addr.city || addr.town || addr.village || addr.county || "";
+            const state = addr.state || "";
+            const country = addr.country || "India";
+            const postcode = addr.postcode ? addr.postcode.replace(/\s/g, "") : "";
+
+            if (line1) setNewAddrLine1(line1);
+            if (line2) setNewAddrLine2(line2);
+            if (city) setNewCity(city);
+            if (state) setNewState(state);
+            if (country) setNewCountry(country);
+            if (postcode) setNewPincode(postcode);
+
+            showToast("Complete address details detected!");
+          } else {
+            showToast("Unable to resolve GPS address metadata", "error");
+          }
+        } catch (err) {
+          console.error(err);
+          showToast("Failed to fetch address from geocoder", "error");
+        }
+      },
+      (error) => {
+        console.error(error);
+        showToast("Location access denied or unavailable", "error");
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  const formatTimeLeft = (ms) => {
+    if (ms <= 0) return "0:00";
+    const minutes = Math.floor(ms / 60000);
+    const seconds = Math.floor((ms % 60000) / 1000);
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+  };
 
   const fetchAddresses = async () => {
     setLoadingAddresses(true);
@@ -241,11 +315,16 @@ export default function UserProfile({ token, user, setUser, showToast }) {
   };
 
   const handleCancelOrder = async (orderId) => {
+    if (!window.confirm("Are you sure you want to cancel this order? This action cannot be undone.")) {
+      return;
+    }
     try {
       const data = await api.cancelOrder(token, orderId);
       if (data.success) {
         showToast("Order cancelled successfully");
         fetchOrders();
+      } else {
+        showToast(data.message || "Failed to cancel order", "error");
       }
     } catch (err) {
       showToast("Failed to cancel order", "error");
@@ -414,11 +493,20 @@ export default function UserProfile({ token, user, setUser, showToast }) {
               </div>
             )}
 
-            {/* Create/Edit Address Form */}
             <div id="address-form-section" className="border-t border-slate-100 pt-6 mt-6">
-              <h4 className="font-bold text-slate-800 text-sm mb-4">
-                {editingAddressId ? "Edit Address Location" : "Add New Location"}
-              </h4>
+              <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
+                <h4 className="font-bold text-slate-800 text-sm">
+                  {editingAddressId ? "Edit Address Location" : "Add New Location"}
+                </h4>
+                <button
+                  type="button"
+                  onClick={handleDetectAddress}
+                  className="btn btn-outline btn-xs flex items-center gap-1.5 !py-1.5 !px-3 text-xs font-bold rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
+                >
+                  <MapPin size={12} className="text-rose-500" />
+                  <span>📍 Auto-Fill Current Location</span>
+                </button>
+              </div>
               <form onSubmit={handleCreateAddress} className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg">
                 <div className="sm:col-span-2 input-group-custom">
                   <input 
@@ -525,6 +613,10 @@ export default function UserProfile({ token, user, setUser, showToast }) {
                   const isProcessing = ord.status === "processing";
                   const isShipped = ord.status === "shipped";
                   
+                  const timePassed = currentTime - new Date(ord.created_at).getTime();
+                  const timeLeftMs = 120000 - timePassed;
+                  const isCancelable = timeLeftMs > 0;
+                  
                   let pulseColor = "";
                   if (isPending) pulseColor = "amber";
                   else if (isProcessing) pulseColor = "blue";
@@ -558,6 +650,11 @@ export default function UserProfile({ token, user, setUser, showToast }) {
 
 
                         <div className="order-header-actions">
+                          {ord.status === "pending" && (currentTime - new Date(ord.created_at).getTime()) > 180000 && (
+                            <span className="text-[10px] bg-rose-50 text-rose-700 border border-rose-200/50 mr-2 font-bold py-1.5 px-3 rounded-full flex items-center gap-1.5 animate-pulse">
+                              ⚠️ Delayed in packing
+                            </span>
+                          )}
                           <span className={`order-status-badge ${isCompleted ? "completed" : isCancelled ? "cancelled" : "pending"}`}>
                             {pulseColor && <span className={`pulse-dot ${pulseColor}`}></span>}
                             {ord.status}
@@ -605,7 +702,12 @@ export default function UserProfile({ token, user, setUser, showToast }) {
                                   </div>
                                   <div className="tracker-label-container">
                                     <span className="tracker-label-title">Packing</span>
-                                    <span className="tracker-label-desc">Snacks Prepared</span>
+                                    <span className={`tracker-label-desc ${ord.status === 'pending' && (currentTime - new Date(ord.created_at).getTime()) > 180000 ? 'text-rose-600 font-extrabold' : ''}`}>
+                                      {ord.status === 'pending' && (currentTime - new Date(ord.created_at).getTime()) > 180000 
+                                        ? `Delayed in packing (${Math.floor((currentTime - new Date(ord.created_at).getTime() - 180000) / 1000)}s)`
+                                        : "Snacks Prepared"
+                                      }
+                                    </span>
                                   </div>
                                   <div className="tracker-line-connector"></div>
                                 </div>
@@ -753,14 +855,20 @@ export default function UserProfile({ token, user, setUser, showToast }) {
                               </div>
 
                               {ord.status === "pending" && (
-                                <div className="order-receipt-footer">
+                                <div className="order-receipt-footer flex flex-col items-end gap-1.5">
                                   <button 
                                     onClick={() => handleCancelOrder(ord.id)}
                                     className="order-cancel-btn"
+                                    disabled={!isCancelable}
                                   >
                                     <AlertTriangle size={14} />
-                                    Cancel Order
+                                    {isCancelable ? `Cancel Order (Ends in ${formatTimeLeft(timeLeftMs)})` : "Cancel Order (Expired)"}
                                   </button>
+                                  {isCancelable && (
+                                    <span className="text-[10px] text-slate-400 font-medium mt-1">
+                                      Orders can only be cancelled within 2 minutes of placement.
+                                    </span>
+                                  )}
                                 </div>
                               )}
                             </div>

@@ -60,6 +60,7 @@ const getAllProducts = (pincode, callback) => {
         p.product_name,
         p.product_description,
         p.price,
+        p.discount_price,
         wp.stock_quantity AS stock_quantity,
         p.product_image,
         p.is_available,
@@ -81,6 +82,7 @@ const getAllProducts = (pincode, callback) => {
         p.product_name,
         p.product_description,
         p.price,
+        p.discount_price,
         p.stock_quantity,
         p.product_image,
         p.is_available,
@@ -104,6 +106,7 @@ const getProductById = (productId, callback) => {
       p.product_name,
       p.product_description,
       p.price,
+      p.discount_price,
       p.stock_quantity,
       p.product_image,
       p.is_available,
@@ -132,6 +135,7 @@ const getProductsByCategoryId = (categoryId, pincode, callback) => {
         p.product_name,
         p.product_description,
         p.price,
+        p.discount_price,
         wp.stock_quantity AS stock_quantity,
         p.product_image,
         p.is_available,
@@ -151,6 +155,7 @@ const getProductsByCategoryId = (categoryId, pincode, callback) => {
         product_name,
         product_description,
         price,
+        discount_price,
         stock_quantity,
         product_image,
         is_available,
@@ -201,11 +206,18 @@ const deleteProduct = (productId, callback) => {
   db.query(sql, [productId], callback);
 };
 
+// update product offer price
+const updateProductOffer = (productId, discountPrice, callback) => {
+  const sql = "UPDATE products SET discount_price = ? WHERE product_id = ?";
+  db.query(sql, [discountPrice, productId], callback);
+};
+
 module.exports = {
   addProduct,
   getAllProducts,
   getProductById,
   getProductsByCategoryId,
   updateProduct,
-  deleteProduct
+  deleteProduct,
+  updateProductOffer
 };

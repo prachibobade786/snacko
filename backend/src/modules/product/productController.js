@@ -197,11 +197,42 @@ const deleteProduct = (req, res) => {
   });
 };
 
+// PATCH /products/:id/offer
+const updateProductOffer = (req, res) => {
+  const productId = req.params.id;
+  const { discount_price } = req.body;
+
+  const targetPrice = discount_price === undefined || discount_price === "" || discount_price === null ? null : parseFloat(discount_price);
+
+  productService.updateProductOffer(productId, targetPrice, (err, result) => {
+    if (err) {
+      console.log(err);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to update product offer price"
+      });
+    }
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found"
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Product offer price updated successfully"
+    });
+  });
+};
+
 module.exports = {
   addProduct,
   getAllProducts,
   getProductById,
   getProductsByCategoryId,
   updateProduct,
-  deleteProduct
+  deleteProduct,
+  updateProductOffer
 };

@@ -2,7 +2,7 @@ import React from "react";
 import { ShoppingCart, ChevronRight } from "lucide-react";
 import "./CartDrawer.css";
 
-export default function CartDrawer({ isOpen, onClose, cart, updateCartQuantity, getCartTotal, handleCheckout }) {
+export default function CartDrawer({ isOpen, onClose, cart, updateCartQuantity, clearCart, getCartTotal, handleCheckout }) {
   const handlePay = () => {
     onClose();
     if (handleCheckout) {
@@ -34,7 +34,18 @@ export default function CartDrawer({ isOpen, onClose, cart, updateCartQuantity, 
               </span>
             </div>
           </div>
-          <button onClick={onClose} className="cart-close-btn" aria-label="Close cart">✕</button>
+          <div className="flex items-center gap-2">
+            {cart.length > 0 && (
+              <button 
+                onClick={clearCart} 
+                className="clear-cart-btn"
+                title="Remove all items from cart"
+              >
+                Clear Cart
+              </button>
+            )}
+            <button onClick={onClose} className="cart-close-btn" aria-label="Close cart">✕</button>
+          </div>
         </div>
 
         {/* REGULAR CART ITEMS VIEW INSIDE DRAWER */}
@@ -91,6 +102,8 @@ export default function CartDrawer({ isOpen, onClose, cart, updateCartQuantity, 
                         onClick={() => updateCartQuantity(item.product.product_id, 1)}
                         className="card-quantity-btn"
                         style={{ padding: "3px 10px" }}
+                        disabled={item.quantity >= 4}
+                        title={item.quantity >= 4 ? "Maximum 4 units allowed" : ""}
                       >
                         +
                       </button>
