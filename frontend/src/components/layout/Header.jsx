@@ -28,52 +28,50 @@ export default function Header({
 
   return (
     <header className="storefront-header">
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-        <div className="flex items-center gap-8">
-          {/* Logo */}
-          <div
-            className="cursor-pointer logo-mark"
-            onClick={() => { setMode("customer"); }}
-            aria-label="Snacko home"
-          >
-            <img src={logoImg} alt="Snacko" className="box-icon" style={{ height: "34px", width: "auto", objectFit: "contain" }} />
-          </div>
-
-          {/* Pincode selector styled as delivery pill */}
-          <form
-            onSubmit={handlePincodeSubmit}
-            className="delivery-pill"
-            style={{ border: "none", background: "none", cursor: "pointer" }}
-          >
-            <span className="label">Delivering to</span>
-            <span className="value">
-              <input
-                type="text"
-                placeholder="Enter pincode..."
-                className="header-pincode-input"
-                value={pincodeInput}
-                onChange={(e) => setPincodeInput(e.target.value)}
-              />
-              <button
-                type="button"
-                onClick={detectGeoLocation}
-                className="header-location-btn"
-                title="Detect current location"
-              >
-                <Compass size={24} />
-              </button>
-              <button type="submit" style={{ display: "none" }}></button>
-            </span>
-            {resolvedAddress && (
-              <span
-                className="text-[9px] text-slate-500 font-bold truncate max-w-[140px] block leading-none pt-1"
-                title={resolvedAddress}
-              >
-                {resolvedAddress}
-              </span>
-            )}
-          </form>
+      <div className="header-container max-w-7xl mx-auto">
+        {/* Logo */}
+        <div
+          className="cursor-pointer logo-mark"
+          onClick={() => { setMode("customer"); }}
+          aria-label="Snacko home"
+        >
+          <img src={logoImg} alt="Snacko" className="box-icon" style={{ height: "34px", width: "auto", objectFit: "contain" }} />
         </div>
+
+        {/* Pincode selector styled as delivery pill */}
+        <form
+          onSubmit={handlePincodeSubmit}
+          className="delivery-pill"
+          style={{ border: "none", background: "none", cursor: "pointer" }}
+        >
+          <span className="label">Delivering to</span>
+          <span className="value">
+            <input
+              type="text"
+              placeholder="Enter pincode..."
+              className="header-pincode-input"
+              value={pincodeInput}
+              onChange={(e) => setPincodeInput(e.target.value)}
+            />
+            <button
+              type="button"
+              onClick={detectGeoLocation}
+              className="header-location-btn"
+              title="Detect current location"
+            >
+              <Compass size={24} />
+            </button>
+            <button type="submit" style={{ display: "none" }}></button>
+          </span>
+          {resolvedAddress && (
+            <span
+              className="text-[9px] text-slate-500 font-bold truncate max-w-[140px] block leading-none pt-1"
+              title={resolvedAddress}
+            >
+              {resolvedAddress}
+            </span>
+          )}
+        </form>
 
         {/* Search bar */}
         {mode === "customer" && (

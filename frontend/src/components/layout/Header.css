@@ -184,19 +184,64 @@
   display: none;
 }
 
+.header-container {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  width: 100%;
+}
+
+.header-actions {
+  margin-left: auto;
+}
+
 /* Responsive constraints */
 @media (max-width: 980px) {
-  .header-pincode-form {
-    padding: 4px 10px;
-  }
   .header-pincode-input {
     width: 110px;
   }
 }
 
 @media (max-width: 768px) {
-  .header-search-bar {
-    display: none;
+  .header-container {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "logo actions"
+      "pincode pincode"
+      "search search";
+    gap: 12px;
+    align-items: center;
+  }
+
+  .logo-mark {
+    grid-area: logo;
+    margin-right: 0;
+  }
+
+  .header-actions {
+    grid-area: actions;
+    margin-left: auto;
+  }
+
+  .delivery-pill {
+    grid-area: pincode;
+    margin-left: 0;
+    padding-right: 0;
+    border-right: none;
+    background: var(--tint);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    width: 100%;
+  }
+
+  .search-wrap {
+    grid-area: search;
+    width: 100%;
+  }
+
+  .search-box {
+    padding: 8px 14px;
   }
 }
 
