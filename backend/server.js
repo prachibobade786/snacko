@@ -42,6 +42,10 @@ app.use("/api", productRoutes);
 app.use("/api", cartItemRoutes);
 app.use("/api", paymentRoutes);
 
+// Admin Portal APIs
+const adminRoutes = require("./src/modules/admin/adminRoutes");
+app.use("/api/admin", adminRoutes);
+
 app.use((req, res) => {
   res.status(404).json({
     success: false,

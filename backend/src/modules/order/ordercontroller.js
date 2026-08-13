@@ -39,15 +39,29 @@ const getOrders = async (
 ) => {
 
     try {
+        const { page, limit } = req.query;
 
-        const orders =
+        const result =
         await orderService.getOrders(
-            req.user.id
+            req.user.id,
+            page,
+            limit
         );
+
+        if (page && limit) {
+            return res.status(200).json({
+                success: true,
+                data: result.orders,
+                total: result.total,
+                page: result.page,
+                limit: result.limit,
+                totalPages: result.totalPages
+            });
+        }
 
         res.status(200).json({
             success:true,
-            data:orders
+            data:result
         });
 
     } catch(error){
@@ -97,7 +111,8 @@ const cancelOrder = async (
     try {
 
         await orderService.removeOrder(
-            req.params.id
+            req.params.id,
+            req.user
         );
 
         res.status(200).json({
