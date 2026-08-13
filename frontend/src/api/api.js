@@ -228,25 +228,56 @@ export const createWarehouseUser = async (token, userData) => {
   return await res.json();
 };
 
-export const fetchAdminOrders = async (token) => {
-  const res = await fetch(`${API_BASE}/admin/orders`, {
+
+
+// 8. Coupons
+export const fetchCoupons = async (token) => {
+  const res = await fetch(`${API_BASE}/coupons`, {
     headers: getHeaders(token)
   });
   return await res.json();
 };
 
-export const updateOrderStatus = async (token, orderId, status, trackingData = {}) => {
-  const res = await fetch(`${API_BASE}/admin/orders/${orderId}/status`, {
-    method: "PUT",
+export const createCoupon = async (token, couponData) => {
+  const res = await fetch(`${API_BASE}/coupons`, {
+    method: "POST",
     headers: getHeaders(token),
-    body: JSON.stringify({ status, ...trackingData })
+    body: JSON.stringify(couponData)
   });
   return await res.json();
 };
 
-export const fetchWarehouseOrders = async (token, warehouseId) => {
-  const res = await fetch(`${API_BASE}/admin/warehouses/${warehouseId}/orders`, {
+export const updateCoupon = async (token, couponId, couponData) => {
+  const res = await fetch(`${API_BASE}/coupons/${couponId}`, {
+    method: "PATCH",
+    headers: getHeaders(token),
+    body: JSON.stringify(couponData)
+  });
+  return await res.json();
+};
+
+export const deleteCoupon = async (token, couponId) => {
+  const res = await fetch(`${API_BASE}/coupons/${couponId}`, {
+    method: "DELETE",
     headers: getHeaders(token)
+  });
+  return await res.json();
+};
+
+export const applyCoupon = async (token, code, totalAmount) => {
+  const res = await fetch(`${API_BASE}/coupons/apply`, {
+    method: "POST",
+    headers: getHeaders(token),
+    body: JSON.stringify({ code, totalAmount })
+  });
+  return await res.json();
+};
+
+export const updateProductOffer = async (token, productId, discountPrice) => {
+  const res = await fetch(`${API_BASE}/products/${productId}/offer`, {
+    method: "PATCH",
+    headers: getHeaders(token),
+    body: JSON.stringify({ discount_price: discountPrice })
   });
   return await res.json();
 };
