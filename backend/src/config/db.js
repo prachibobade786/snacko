@@ -10,13 +10,10 @@ const pool = mysql.createPool({
   connectionLimit: 10
 });
 
-// Keep Sanika's style working:
-// await db.execute(sql, values)
+
 const oldQuery = pool.query.bind(pool);
 
-// Keep Prachi's old style working:
-// db.query(sql, values, callback)
-// db.query(sql, callback)
+
 pool.query = (sql, values, callback) => {
   if (typeof values === "function") {
     callback = values;
