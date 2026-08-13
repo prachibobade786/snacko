@@ -15,7 +15,8 @@ const addCategory = (req, res) => {
     category_name,
     category_description: category_description || null,
     category_image: category_image || null,
-    is_active: is_active === undefined ? true : is_active
+    is_active: is_active === undefined ? true : is_active,
+    warehouse_id: req.user ? req.user.warehouse_id : null
   };
 
   categoryService.addCategory(categoryData, (err, result) => {
@@ -37,7 +38,9 @@ const addCategory = (req, res) => {
 
 // GET /categories
 const getAllCategories = (req, res) => {
-  categoryService.getAllCategories((err, result) => {
+  const { pincode, warehouse_id } = req.query;
+
+  categoryService.getAllCategories(pincode, warehouse_id, (err, result) => {
     if (err) {
       console.log(err);
       return res.status(500).json({

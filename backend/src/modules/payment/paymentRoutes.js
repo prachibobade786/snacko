@@ -1,16 +1,26 @@
 const express = require("express");
 
 const {
+  createRazorpayOrder,
+  verifyRazorpayPayment,
+  addCodPayment,
   addPayment,
   getAllPayments,
   getPaymentById,
   getPaymentsByUserId,
   getPaymentsByOrderId,
   updatePayment,
-  deletePayment
+  deletePayment,
+  renderCheckoutForm
 } = require("./paymentController");
 
 const router = express.Router();
+
+// Razorpay & COD payment APIs
+router.post("/payments/razorpay/create-order", createRazorpayOrder);
+router.post("/payments/razorpay/verify", verifyRazorpayPayment);
+router.get("/payments/razorpay/checkout-form", renderCheckoutForm);
+router.post("/payments/cod", addCodPayment);
 
 // payment APIs
 router.post("/payments", addPayment);
@@ -22,3 +32,4 @@ router.put("/payments/:id", updatePayment);
 router.delete("/payments/:id", deletePayment);
 
 module.exports = router;
+
