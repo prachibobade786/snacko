@@ -6,8 +6,8 @@ const addCategory = (categoryData, callback) => {
 };
 
 // get all categories
-const getAllCategories = (callback) => {
-  categoryModel.getAllCategories(callback);
+const getAllCategories = (pincode, warehouseId, callback) => {
+  categoryModel.getAllCategories(pincode, warehouseId, callback);
 };
 
 // get category by id
