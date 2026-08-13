@@ -17,8 +17,6 @@ export const getInitialApiUrl = () => {
   }) || 'http://localhost:5000/api';
 };
 
-
-
 // ==========================================
 // 1. User & Authentication APIs
 // ==========================================
@@ -118,7 +116,6 @@ export const updateUserAddress = async (apiBase, token, addressId, addressData) 
   });
   return await res.json();
 };
-
 
 // ==========================================
 // 3. Order & Order Items APIs
@@ -222,19 +219,6 @@ export const recordCodPayment = async (apiBase, token, codData) => {
 };
 
 
-export const getAiResponse = async (apiBase, token, text, userId = null) => {
-  const headers = { 'Content-Type': 'application/json' };
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  const res = await fetch(`${apiBase}/ai/chat`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ text, userId })
-  });
-  return await res.json();
-};
-
 // ==========================================
 // 5. Catalog & Warehouse APIs
 // ==========================================
@@ -255,7 +239,6 @@ export const checkWarehousePincode = async (apiBase, pincode) => {
   const res = await fetch(`${apiBase}/warehouses/check/${pincode}`);
   return await res.json();
 };
-
 
 // ==========================================
 // 6. Ratings & Reviews APIs
