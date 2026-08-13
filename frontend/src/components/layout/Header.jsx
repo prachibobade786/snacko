@@ -79,7 +79,7 @@ export default function Header({
         {mode === "customer" && (
           <div className="search-wrap">
             <div className="search-box">
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="#B08A6B" strokeWidth="2"></circle><path d="M21 21L16.65 16.65" stroke="#B08A6B" strokeWidth="2" strokeLinecap="round"></path></svg>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="#B08A6B" stroke-width="2"></circle><path d="M21 21L16.65 16.65" stroke="#B08A6B" stroke-width="2" stroke-linecap="round"></path></svg>
               <input
                 type="text"
                 placeholder="Search for chips, cola, chocolate..."

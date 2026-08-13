@@ -20,7 +20,13 @@ export default function CheckoutPage() {
     setUserAddresses, 
     selectedAddrId, 
     setSelectedAddrId, 
-    executeOrderPlacement 
+    executeOrderPlacement,
+    formatTimeStr,
+    isDeliveryOpen,
+    appliedCoupon,
+    setAppliedCoupon,
+    couponDiscount,
+    setCouponDiscount
   } = useApp();
 
   const [paymentMethod, setPaymentMethod] = useState("COD"); // "COD" | "RAZORPAY"
@@ -28,6 +34,47 @@ export default function CheckoutPage() {
   const [checkingMap, setCheckingMap] = useState(true);
   const [loadingAddresses, setLoadingAddresses] = useState(false);
   const [placingOrder, setPlacingOrder] = useState(false);
+
+  // Coupon entry local states
+  const [couponCodeInput, setCouponCodeInput] = useState(appliedCoupon ? appliedCoupon.code : "");
+  const [loadingCoupon, setLoadingCoupon] = useState(false);
+  const [couponError, setCouponError] = useState("");
+  const [couponSuccess, setCouponSuccess] = useState("");
+
+  const handleApplyCoupon = async () => {
+    setCouponError("");
+    setCouponSuccess("");
+    if (!couponCodeInput.trim()) return;
+
+    setLoadingCoupon(true);
+    try {
+      const res = await api.applyCoupon(token, couponCodeInput.toUpperCase().trim(), cartTotal);
+      if (res.success) {
+        setAppliedCoupon({ 
+          code: res.data.code, 
+          discount_type: res.data.discount_type, 
+          discount_value: res.data.discount_value 
+        });
+        setCouponDiscount(parseFloat(res.data.discount_amount));
+        setCouponSuccess(`Coupon applied! You saved ₹${parseFloat(res.data.discount_amount).toFixed(2)}.`);
+      } else {
+        setCouponError(res.message || "Failed to apply coupon.");
+      }
+    } catch (err) {
+      console.error(err);
+      setCouponError("Failed to connect to the coupon server.");
+    } finally {
+      setLoadingCoupon(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponDiscount(0);
+    setCouponCodeInput("");
+    setCouponError("");
+    setCouponSuccess("");
+  };
 
   // Address Forms state
   const [showAddForm, setShowAddForm] = useState(false);
@@ -208,7 +255,7 @@ export default function CheckoutPage() {
 
   const cartTotal = getCartTotal();
   const deliveryFee = 15;
-  const grandTotal = cartTotal + deliveryFee;
+  const grandTotal = Math.max(0, cartTotal + deliveryFee - couponDiscount);
 
   const activeAddress = userAddresses.find(a => a.id === selectedAddrId) || userAddresses[0];
   const isSelectedAddrPincodeMatch = activeAddress && pincode ? String(activeAddress.pincode).trim() === String(pincode).trim() : true;
@@ -244,6 +291,22 @@ export default function CheckoutPage() {
         <ChevronLeft size={16} />
         <span>Return to Storefront</span>
       </span>
+
+      {/* Closed Operational Hours Warning Banner */}
+      {!isDeliveryOpen() && warehouse && (
+        <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 text-center mb-6 shadow-sm flex flex-col items-center gap-2">
+          <AlertTriangle size={24} className="text-rose-500" />
+          <h4 className="font-extrabold text-sm text-slate-800">
+            {warehouse.is_active === 0 ? 'Fulfillment Center Currently Inactive' : 'Fulfillment Store Deliveries Currently Offline'}
+          </h4>
+          <p className="text-slate-600 text-xs">
+            {warehouse.is_active === 0 
+              ? `We apologize! The fulfillment center ${warehouse.name} has been temporarily set to inactive by the administrator. Ordering is currently disabled.`
+              : `We apologize! Deliveries from ${warehouse.name} are currently closed. Service hours for this location are from ${formatTimeStr(warehouse.delivery_start_time)} to ${formatTimeStr(warehouse.delivery_end_time)}. Please checkout during these operational hours.`
+            }
+          </p>
+        </div>
+      )}
 
       {/* Progress Breadcrumbs */}
       <div className="checkout-progress">
@@ -679,6 +742,44 @@ export default function CheckoutPage() {
               </div>
             )}
 
+            {/* Coupon Code Section */}
+            <div className="border-t border-slate-100 pt-4 pb-2">
+              <label className="form-input-label d-block text-xs font-bold text-slate-600 mb-2">Apply Promo Code / Coupon</label>
+              <div className="d-flex gap-2">
+                <input
+                  type="text"
+                  placeholder="ENTER COUPON CODE"
+                  className="form-control form-control-sm text-uppercase rounded-3 font-semibold px-3 py-2 text-xs"
+                  value={couponCodeInput}
+                  onChange={(e) => setCouponCodeInput(e.target.value)}
+                  disabled={!!appliedCoupon}
+                  style={{ fontSize: "12px", textTransform: "uppercase" }}
+                />
+                {appliedCoupon ? (
+                  <button
+                    type="button"
+                    onClick={handleRemoveCoupon}
+                    className="btn btn-danger btn-sm rounded-3 text-xs px-3"
+                    style={{ backgroundColor: "#ef4444", border: "none", color: "#fff" }}
+                  >
+                    Remove
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleApplyCoupon}
+                    disabled={loadingCoupon || !couponCodeInput}
+                    className="btn btn-dark btn-sm rounded-3 text-xs px-3"
+                    style={{ backgroundColor: "#0f172a", border: "none", color: "#fff" }}
+                  >
+                    {loadingCoupon ? "..." : "Apply"}
+                  </button>
+                )}
+              </div>
+              {couponError && <p className="text-danger text-xxs font-bold mt-1.5" style={{ fontSize: "10px", color: "#ef4444" }}>{couponError}</p>}
+              {couponSuccess && <p className="text-success text-xxs font-bold mt-1.5" style={{ fontSize: "10px", color: "#10b981" }}>{couponSuccess}</p>}
+            </div>
+
             {/* Price Calculations */}
             <div className="border-t border-slate-100 pt-4 space-y-2">
               <div className="summary-row">
@@ -689,6 +790,13 @@ export default function CheckoutPage() {
                 <span>Delivery Charge</span>
                 <span className="font-bold text-emerald-700">₹{deliveryFee}</span>
               </div>
+
+              {appliedCoupon && (
+                <div className="summary-row text-success font-semibold" style={{ color: "#10b981" }}>
+                  <span>Discount ({appliedCoupon.code})</span>
+                  <span>-₹{couponDiscount}</span>
+                </div>
+              )}
               
               <div className="summary-row total">
                 <span>Total</span>
@@ -699,13 +807,18 @@ export default function CheckoutPage() {
             {/* Place Order CTA Button */}
             <button
               onClick={handlePlaceOrder}
-              disabled={!isSelectedAddrServiceable || placingOrder || cart.length === 0}
-              className="place-order-btn"
+              disabled={!isSelectedAddrServiceable || !isDeliveryOpen() || placingOrder || cart.length === 0}
+              className={`place-order-btn ${!isDeliveryOpen() ? 'bg-slate-400 hover:bg-slate-400 cursor-not-allowed opacity-60 shadow-none' : ''}`}
             >
               {placingOrder ? (
                 <>
                   <Loader2 size={16} className="animate-spin" />
                   <span>Processing...</span>
+                </>
+              ) : !isDeliveryOpen() ? (
+                <>
+                  <AlertTriangle size={16} />
+                  <span>Delivery Closed</span>
                 </>
               ) : (
                 <>

@@ -6,37 +6,36 @@ const getAllCoupons = async () => {
   return rows;
 };
 
-// Create a new coupon
-const createCoupon = async (data) => {
-  const { code, discount_type, discount_value, min_order_amount, expiry_date } = data;
-  const [result] = await db.execute(
-    `INSERT INTO coupons (code, discount_type, discount_value, min_order_amount, expiry_date)
-     VALUES (?, ?, ?, ?, ?)`,
-    [code, discount_type, discount_value, min_order_amount, expiry_date || null]
+// Get coupon by code (active and valid)
+const getCouponByCode = async (code) => {
+  const [rows] = await db.execute(
+    "SELECT * FROM coupons WHERE code = ? AND is_active = 1 AND (expiry_date IS NULL OR expiry_date >= NOW())",
+    [code]
   );
-  return { id: result.insertId, ...data };
+  return rows[0];
 };
 
-// Update a coupon
-const updateCoupon = async (couponId, data) => {
+// Create a new coupon
+const createCoupon = async (couponData) => {
+  const { code, discount_type, discount_value, min_order_amount, expiry_date } = couponData;
+  const expiry = expiry_date || null;
+  const [result] = await db.execute(
+    `INSERT INTO coupons (code, discount_type, discount_value, min_order_amount, expiry_date, is_active)
+     VALUES (?, ?, ?, ?, ?, 1)`,
+    [code, discount_type, discount_value, min_order_amount || 0.00, expiry]
+  );
+  return result;
+};
+
+// Update coupon details
+const updateCoupon = async (id, updateData) => {
   const fields = [];
   const values = [];
-  const allowedFields = ["code", "discount_type", "discount_value", "min_order_amount", "expiry_date", "is_active"];
-  
-  allowedFields.forEach(field => {
-    if (data[field] !== undefined) {
-      fields.push(`${field} = ?`);
-      if (field === "code" && typeof data[field] === "string") {
-        values.push(data[field].toUpperCase().trim());
-      } else {
-        values.push(data[field]);
-      }
-    }
-  });
-
-  if (fields.length === 0) return { affectedRows: 0 };
-
-  values.push(couponId);
+  for (const [key, value] of Object.entries(updateData)) {
+    fields.push(`${key} = ?`);
+    values.push(value);
+  }
+  values.push(id);
   const [result] = await db.execute(
     `UPDATE coupons SET ${fields.join(", ")} WHERE id = ?`,
     values
@@ -44,37 +43,26 @@ const updateCoupon = async (couponId, data) => {
   return result;
 };
 
-// Delete a coupon
-const deleteCoupon = async (couponId) => {
-  const [result] = await db.execute("DELETE FROM coupons WHERE id = ?", [couponId]);
+// Delete coupon
+const deleteCoupon = async (id) => {
+  const [result] = await db.execute("DELETE FROM coupons WHERE id = ?", [id]);
   return result;
 };
 
-// Retrieve an active, non-expired coupon by code
-const getCouponByCode = async (code) => {
+// Check if user has already used this coupon code in non-cancelled orders
+const hasUserUsedCoupon = async (userId, couponCode) => {
   const [rows] = await db.execute(
-    `SELECT * FROM coupons 
-     WHERE code = ? AND is_active = 1 
-       AND (expiry_date IS NULL OR expiry_date > NOW())`,
-    [code]
+    "SELECT id FROM orders WHERE user_id = ? AND coupon_code = ? AND status != 'cancelled' LIMIT 1",
+    [userId, couponCode]
   );
-  return rows[0] || null;
-};
-
-// Verify if a user has already used a specific coupon code (excluding cancelled orders)
-const hasUserUsedCoupon = async (userId, code) => {
-  const [rows] = await db.execute(
-    "SELECT COUNT(*) AS count FROM orders WHERE user_id = ? AND coupon_code = ? AND status != 'cancelled'",
-    [userId, code]
-  );
-  return rows[0].count > 0;
+  return rows.length > 0;
 };
 
 module.exports = {
   getAllCoupons,
+  getCouponByCode,
   createCoupon,
   updateCoupon,
   deleteCoupon,
-  getCouponByCode,
   hasUserUsedCoupon
 };

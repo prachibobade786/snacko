@@ -1,5 +1,5 @@
 const jwt = require("jsonwebtoken");
-const reviewServices = require("./reviewService");
+const reviewServices = require("./reviewServices");
 
 // POST /products/:productId/reviews
 const addProductReview = async (req, res) => {

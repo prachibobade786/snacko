@@ -1,69 +1,47 @@
 import React, { useEffect, useState } from "react";
-import { 
-  Ticket, 
-  Plus, 
-  Trash2, 
-  Calendar, 
-  Percent, 
-  Coins, 
-  CheckCircle2, 
-  XCircle, 
-  AlertCircle,
-  Clock,
-  Sparkles
-} from "lucide-react";
-import { 
-  fetchCoupons, 
-  createCoupon, 
-  updateCoupon, 
-  deleteCoupon 
-} from "../../api/api";
+import { Plus, Trash2, Edit, Ticket, ToggleLeft, ToggleRight, Loader2, Calendar, X } from "lucide-react";
+import * as api from "../../api/api";
 
 export default function CouponManager({ token }) {
   const [coupons, setCoupons] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [editingId, setEditingId] = useState(null);
 
-  // Form states
+  // Coupon Form States
   const [code, setCode] = useState("");
   const [discountType, setDiscountType] = useState("percentage");
   const [discountValue, setDiscountValue] = useState("");
   const [minOrderAmount, setMinOrderAmount] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    loadCoupons();
-  }, []);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const loadCoupons = async () => {
     setLoading(true);
-    setError("");
     try {
-      const res = await fetchCoupons(token);
+      const res = await api.fetchCoupons(token);
       if (res.success) {
         setCoupons(res.data || []);
-      } else {
-        setError(res.message || "Failed to fetch coupons");
       }
     } catch (err) {
       console.error(err);
-      setError("An error occurred while loading coupons.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCreate = async (e) => {
+  useEffect(() => {
+    if (token) {
+      loadCoupons();
+    }
+  }, [token]);
+
+  const handleSubmitCoupon = async (e) => {
     e.preventDefault();
     setError("");
     setSuccess("");
-
-    if (!code.trim() || !discountValue) {
-      setError("Coupon code and discount value are required.");
-      return;
-    }
+    if (!code || !discountValue) return;
 
     setSubmitting(true);
     try {
@@ -72,307 +50,293 @@ export default function CouponManager({ token }) {
         discount_type: discountType,
         discount_value: parseFloat(discountValue),
         min_order_amount: parseFloat(minOrderAmount || 0),
-        expiry_date: expiryDate ? new Date(expiryDate).toISOString() : null
+        expiry_date: expiryDate ? `${expiryDate}T23:59:59` : null
       };
 
-      const res = await createCoupon(token, payload);
+      let res;
+      if (editingId) {
+        res = await api.updateCoupon(token, editingId, payload);
+      } else {
+        res = await api.createCoupon(token, payload);
+      }
+
       if (res.success) {
-        setSuccess("Coupon created successfully!");
-        // Reset form
+        setSuccess(editingId ? "Coupon updated successfully!" : "Coupon code created successfully!");
+        setEditingId(null);
         setCode("");
-        setDiscountType("percentage");
         setDiscountValue("");
         setMinOrderAmount("");
         setExpiryDate("");
-        // Reload list
         loadCoupons();
       } else {
-        setError(res.message || "Failed to create coupon");
+        setError(res.message || "Failed to save coupon.");
       }
     } catch (err) {
       console.error(err);
-      setError("An error occurred while creating the coupon.");
+      setError("Connection to server failed.");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleToggleStatus = async (couponId, currentStatus) => {
+  const handleEditClick = (coupon) => {
     setError("");
     setSuccess("");
+    setEditingId(coupon.id);
+    setCode(coupon.code);
+    setDiscountType(coupon.discount_type);
+    setDiscountValue(coupon.discount_value);
+    setMinOrderAmount(coupon.min_order_amount);
+    
+    if (coupon.expiry_date) {
+      const date = new Date(coupon.expiry_date);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      setExpiryDate(`${year}-${month}-${day}`);
+    } else {
+      setExpiryDate("");
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setCode("");
+    setDiscountType("percentage");
+    setDiscountValue("");
+    setMinOrderAmount("");
+    setExpiryDate("");
+    setError("");
+    setSuccess("");
+  };
+
+  const handleToggleStatus = async (coupon) => {
     try {
-      const newStatus = currentStatus === 1 ? 0 : 1;
-      const res = await updateCoupon(token, couponId, { is_active: newStatus });
+      const newStatus = coupon.is_active === 1 ? 0 : 1;
+      const res = await api.updateCoupon(token, coupon.id, { is_active: newStatus });
       if (res.success) {
-        setSuccess(`Coupon ${newStatus === 1 ? "activated" : "deactivated"} successfully.`);
-        setCoupons(prev => prev.map(c => c.id === couponId ? { ...c, is_active: newStatus } : c));
+        loadCoupons();
       } else {
-        setError(res.message || "Failed to update coupon status");
+        alert(res.message || "Failed to update coupon status.");
       }
     } catch (err) {
       console.error(err);
-      setError("An error occurred while updating coupon status.");
     }
   };
 
-  const handleDelete = async (couponId) => {
-    if (!window.confirm("Are you sure you want to delete this coupon? This action cannot be undone.")) {
-      return;
-    }
-
-    setError("");
-    setSuccess("");
+  const handleDeleteCoupon = async (couponId) => {
+    if (!window.confirm("Are you sure you want to permanently delete this coupon?")) return;
     try {
-      const res = await deleteCoupon(token, couponId);
+      const res = await api.deleteCoupon(token, couponId);
       if (res.success) {
-        setSuccess("Coupon deleted successfully.");
-        setCoupons(prev => prev.filter(c => c.id !== couponId));
+        if (editingId === couponId) {
+          handleCancelEdit();
+        }
+        loadCoupons();
       } else {
-        setError(res.message || "Failed to delete coupon");
+        alert(res.message || "Failed to delete coupon.");
       }
     } catch (err) {
       console.error(err);
-      setError("An error occurred while deleting the coupon.");
     }
   };
 
-  const formatExpiryDate = (dateString) => {
-    if (!dateString) return "Never";
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return "Never";
-    return date.toLocaleDateString(undefined, { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const isExpired = (dateString) => {
-    if (!dateString) return false;
-    const expiry = new Date(dateString);
-    return expiry.getTime() < Date.now();
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "Never";
+    const date = new Date(dateStr);
+    return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
   return (
-    <div className="container-fluid p-0">
-      {/* Title block */}
-      <div className="d-flex align-items-center justify-content-between mb-4">
-        <div>
-          <h3 className="fw-extrabold text-dark m-0 d-flex align-items-center gap-2">
-            <Ticket className="text-warning" size={28} />
-            Promo Coupons Manager
-          </h3>
-          <p className="text-muted text-sm m-0">Create, configure, and monitor customer promo codes</p>
+    <div className="fade-in d-flex flex-column gap-4">
+      {/* Create/Edit Coupon Card */}
+      <div className="card border-0 rounded-4 p-4 shadow-sm bg-white">
+        <div className="d-flex justify-content-between align-items-center mb-1">
+          <h4 className="fw-extrabold text-dark mb-0">
+            {editingId ? "Edit Promo Coupon" : "Create Promo Coupon"}
+          </h4>
+          {editingId && (
+            <button 
+              type="button" 
+              onClick={handleCancelEdit}
+              className="btn btn-sm btn-outline-secondary rounded-pill d-flex align-items-center gap-1 py-1 px-3 text-xxs font-bold"
+            >
+              <X size={12} />
+              <span>Cancel Edit</span>
+            </button>
+          )}
         </div>
-        <button 
-          onClick={loadCoupons} 
-          className="btn btn-sm btn-outline-secondary rounded-pill px-3"
-          disabled={loading}
-        >
-          Refresh List
-        </button>
+        <p className="text-muted text-xs mb-4">
+          {editingId ? "Modify parameters for this promo coupon" : "Generate checkout coupons and define their eligibility & expiry"}
+        </p>
+        
+        {error && <div className="alert alert-danger py-2 text-xs font-semibold">{error}</div>}
+        {success && <div className="alert alert-success py-2 text-xs font-semibold">{success}</div>}
+
+        <form onSubmit={handleSubmitCoupon} className="row g-3">
+          <div className="col-12 col-md-3">
+            <label className="form-label small fw-bold">Coupon Code *</label>
+            <input 
+              type="text" 
+              required
+              placeholder="e.g. SNACK10"
+              className="form-control py-2 text-xs font-semibold text-uppercase"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+            />
+          </div>
+          <div className="col-6 col-md-2">
+            <label className="form-label small fw-bold">Discount Type *</label>
+            <select
+              className="form-select py-2 text-xs font-semibold"
+              value={discountType}
+              onChange={(e) => setDiscountType(e.target.value)}
+            >
+              <option value="percentage">Percentage (%)</option>
+              <option value="fixed">Fixed Flat (₹)</option>
+            </select>
+          </div>
+          <div className="col-6 col-md-2">
+            <label className="form-label small fw-bold">Discount Value *</label>
+            <input 
+              type="number" 
+              required
+              min="0.01"
+              step="0.01"
+              placeholder={discountType === "percentage" ? "10%" : "₹50"}
+              className="form-control py-2 text-xs font-semibold"
+              value={discountValue}
+              onChange={(e) => setDiscountValue(e.target.value)}
+            />
+          </div>
+          <div className="col-6 col-md-2">
+            <label className="form-label small fw-bold">Min Order Value</label>
+            <input 
+              type="number" 
+              min="0"
+              placeholder="₹0.00"
+              className="form-control py-2 text-xs font-semibold"
+              value={minOrderAmount}
+              onChange={(e) => setMinOrderAmount(e.target.value)}
+            />
+          </div>
+          <div className="col-6 col-md-3">
+            <label className="form-label small fw-bold">Expiry Date</label>
+            <input 
+              type="date" 
+              className="form-control py-2 text-xs font-semibold text-muted"
+              value={expiryDate}
+              onChange={(e) => setExpiryDate(e.target.value)}
+            />
+          </div>
+          <div className="col-12 mt-3">
+            <button 
+              type="submit" 
+              disabled={submitting}
+              className="btn btn-warning w-100 rounded-3 text-xs font-bold text-white py-2.5 shadow-sm d-flex align-items-center justify-content-center gap-1.5"
+            >
+              {submitting ? <Loader2 size={16} className="animate-spin" /> : editingId ? <Edit size={16} /> : <Plus size={16} />}
+              <span>{editingId ? "Save Coupon Changes" : "Create Coupon Code"}</span>
+            </button>
+          </div>
+        </form>
       </div>
 
-      {/* Alerts */}
-      {error && (
-        <div className="alert alert-danger border-0 rounded-3 d-flex align-items-center gap-2 shadow-sm py-2 px-3 mb-3">
-          <AlertCircle size={18} />
-          <span className="text-xs font-semibold">{error}</span>
-        </div>
-      )}
-      {success && (
-        <div className="alert alert-success border-0 rounded-3 d-flex align-items-center gap-2 shadow-sm py-2 px-3 mb-3">
-          <CheckCircle2 size={18} />
-          <span className="text-xs font-semibold">{success}</span>
-        </div>
-      )}
-
-      <div className="row g-4">
-        {/* Creation Form Column */}
-        <div className="col-12 col-lg-4">
-          <div className="card border-0 rounded-4 shadow-sm bg-white p-4">
-            <h5 className="fw-extrabold text-dark mb-3 d-flex align-items-center gap-2">
-              <Sparkles className="text-warning" size={18} />
-              Create Promo Coupon
-            </h5>
-            <form onSubmit={handleCreate}>
-              {/* Code */}
-              <div className="mb-3">
-                <label className="form-label text-xs fw-bold text-muted uppercase">Coupon Code</label>
-                <input 
-                  type="text" 
-                  className="form-control rounded-3 py-2 text-sm font-semibold"
-                  placeholder="e.g. SNACKY50"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.toUpperCase())}
-                  required
-                />
-              </div>
-
-              {/* Discount Type & Value */}
-              <div className="row g-3 mb-3">
-                <div className="col-6">
-                  <label className="form-label text-xs fw-bold text-muted uppercase">Type</label>
-                  <select 
-                    className="form-select rounded-3 py-2 text-sm font-semibold"
-                    value={discountType}
-                    onChange={(e) => setDiscountType(e.target.value)}
-                  >
-                    <option value="percentage">Percentage (%)</option>
-                    <option value="fixed">Flat Amount (₹)</option>
-                  </select>
-                </div>
-                <div className="col-6">
-                  <label className="form-label text-xs fw-bold text-muted uppercase">Discount Value</label>
-                  <div className="input-group">
-                    <span className="input-group-text bg-light text-muted text-xs border-end-0 rounded-start-3">
-                      {discountType === "percentage" ? <Percent size={14} /> : <Coins size={14} />}
-                    </span>
-                    <input 
-                      type="number" 
-                      min="1" 
-                      step="any"
-                      className="form-control rounded-end-3 py-2 text-sm font-semibold"
-                      placeholder={discountType === "percentage" ? "20" : "100"}
-                      value={discountValue}
-                      onChange={(e) => setDiscountValue(e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Min Order & Expiry */}
-              <div className="mb-3">
-                <label className="form-label text-xs fw-bold text-muted uppercase">Min Order Amount (₹)</label>
-                <input 
-                  type="number" 
-                  min="0" 
-                  step="any"
-                  className="form-control rounded-3 py-2 text-sm font-semibold"
-                  placeholder="e.g. 150 (0 for no limit)"
-                  value={minOrderAmount}
-                  onChange={(e) => setMinOrderAmount(e.target.value)}
-                />
-              </div>
-
-              <div className="mb-4">
-                <label className="form-label text-xs fw-bold text-muted uppercase">Expiry Date</label>
-                <div className="input-group">
-                  <span className="input-group-text bg-light text-muted text-xs border-end-0 rounded-start-3">
-                    <Calendar size={14} />
-                  </span>
-                  <input 
-                    type="datetime-local" 
-                    className="form-control rounded-end-3 py-2 text-sm font-semibold"
-                    value={expiryDate}
-                    onChange={(e) => setExpiryDate(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <button 
-                type="submit" 
-                className="btn btn-warning w-100 rounded-3 py-2 text-sm font-bold text-white shadow-sm"
-                disabled={submitting}
-              >
-                {submitting ? "Creating..." : "Create Coupon"}
-              </button>
-            </form>
+      {/* Coupons List Table */}
+      <div className="card border-0 rounded-4 p-4 shadow-sm bg-white">
+        <h4 className="fw-extrabold text-dark mb-1">Active Store Promo Coupons</h4>
+        <p className="text-muted text-xs mb-4">View and control status of generated promo coupons</p>
+        
+        {loading ? (
+          <div className="text-center py-5">
+            <Loader2 className="animate-spin text-warning mx-auto mb-2" size={24} />
+            <p className="text-xs text-muted font-bold">Fetching coupons...</p>
           </div>
-        </div>
-
-        {/* Coupons List Column */}
-        <div className="col-12 col-lg-8">
-          <div className="card border-0 rounded-4 shadow-sm bg-white p-4">
-            <h5 className="fw-extrabold text-dark mb-4">Active Promo Coupons</h5>
-            
-            {loading ? (
-              <div className="text-center py-5 text-muted">
-                <div className="spinner-border spinner-border-sm text-warning me-2" role="status"></div>
-                Loading promo coupons...
-              </div>
-            ) : coupons.length === 0 ? (
-              <div className="text-center py-5 text-muted italic">
-                <Ticket className="mx-auto mb-2 text-muted" size={32} />
-                <p className="m-0 text-sm">No promo coupons configured yet.</p>
-              </div>
-            ) : (
-              <div className="table-responsive">
-                <table className="table table-hover align-middle">
-                  <thead className="table-light text-secondary text-xs uppercase font-bold">
-                    <tr>
-                      <th>Code</th>
-                      <th>Benefit</th>
-                      <th>Requirements</th>
-                      <th>Expiry</th>
-                      <th>Status</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="text-sm">
-                    {coupons.map((coupon) => {
-                      const expired = isExpired(coupon.expiry_date);
-                      return (
-                        <tr key={coupon.id}>
-                          <td>
-                            <span className="badge bg-warning bg-opacity-10 text-warning px-2.5 py-1.5 rounded font-mono font-bold uppercase">
-                              {coupon.code}
+        ) : (
+          <div className="table-responsive">
+            <table className="table table-hover align-middle mb-0">
+              <thead className="table-light">
+                <tr className="small text-muted font-bold">
+                  <th className="py-3 px-3">Coupon Code</th>
+                  <th className="py-3">Type</th>
+                  <th className="py-3">Discount</th>
+                  <th className="py-3">Min Order</th>
+                  <th className="py-3">Expiry Date</th>
+                  <th className="py-3 text-center">Status</th>
+                  <th className="py-3 text-end px-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="small">
+                {coupons.map(coupon => {
+                  const isExpired = coupon.expiry_date && new Date(coupon.expiry_date) < new Date();
+                  const isCurrentlyEditing = editingId === coupon.id;
+                  return (
+                    <tr key={coupon.id} className={`${isExpired ? "opacity-60" : ""} ${isCurrentlyEditing ? "table-warning bg-opacity-10" : ""}`}>
+                      <td className="px-3">
+                        <div className="d-flex align-items-center gap-2">
+                          <Ticket size={16} className="text-warning" />
+                          <span className="fw-bold text-dark">{coupon.code}</span>
+                          {isExpired && (
+                            <span className="badge bg-danger bg-opacity-10 text-danger text-xxs rounded-pill">
+                              Expired
                             </span>
-                          </td>
-                          <td className="font-bold text-dark">
-                            {coupon.discount_type === "percentage" 
-                              ? `${coupon.discount_value}% Off` 
-                              : `₹${coupon.discount_value} Off`}
-                          </td>
-                          <td className="text-muted text-xs">
-                            {parseFloat(coupon.min_order_amount) > 0 
-                              ? `Min. order: ₹${coupon.min_order_amount}` 
-                              : "No minimum order"}
-                          </td>
-                          <td>
-                            <div className="d-flex align-items-center gap-1.5 text-xs">
-                              <Clock size={12} className={expired ? "text-danger" : "text-muted"} />
-                              <span className={expired ? "text-danger font-bold" : "text-muted"}>
-                                {formatExpiryDate(coupon.expiry_date)}
-                                {expired && " (Expired)"}
-                              </span>
-                            </div>
-                          </td>
-                          <td>
-                            <button
-                              onClick={() => handleToggleStatus(coupon.id, coupon.is_active)}
-                              className={`btn btn-xs rounded-pill font-bold text-[10px] px-2 py-0.5 border-0 ${
-                                coupon.is_active === 1 && !expired
-                                  ? "bg-success bg-opacity-10 text-success"
-                                  : "bg-secondary bg-opacity-10 text-secondary"
-                              }`}
-                              title="Click to toggle status"
-                              disabled={expired}
-                            >
-                              {coupon.is_active === 1 && !expired ? "🟢 Active" : "🔴 Inactive"}
-                            </button>
-                          </td>
-                          <td>
-                            <button
-                              onClick={() => handleDelete(coupon.id)}
-                              className="btn btn-link text-danger p-0 border-0"
-                              title="Delete Coupon"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                          )}
+                        </div>
+                      </td>
+                      <td className="text-capitalize text-muted">{coupon.discount_type}</td>
+                      <td className="fw-bold text-dark">
+                        {coupon.discount_type === "percentage" ? `${coupon.discount_value}%` : `₹${coupon.discount_value}`}
+                      </td>
+                      <td className="text-muted">₹{coupon.min_order_amount}</td>
+                      <td>
+                        <div className="d-flex align-items-center gap-1.5 text-muted">
+                          <Calendar size={12} />
+                          <span>{formatDate(coupon.expiry_date)}</span>
+                        </div>
+                      </td>
+                      <td className="text-center">
+                        <button
+                          onClick={() => handleToggleStatus(coupon)}
+                          className="btn btn-sm border-0 p-0 text-muted"
+                          title="Toggle active status"
+                        >
+                          {coupon.is_active === 1 ? (
+                            <ToggleRight className="text-success" size={24} />
+                          ) : (
+                            <ToggleLeft className="text-slate-300" size={24} />
+                          )}
+                        </button>
+                      </td>
+                      <td className="text-end px-3">
+                        <div className="d-flex justify-content-end gap-1.5">
+                          <button
+                            onClick={() => handleEditClick(coupon)}
+                            className="btn btn-sm border-0 p-1 text-slate-400 hover:text-warning rounded-3"
+                            title="Edit coupon"
+                          >
+                            <Edit size={14} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteCoupon(coupon.id)}
+                            className="btn btn-sm border-0 p-1 text-slate-400 hover:text-danger rounded-3"
+                            title="Delete coupon permanently"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {coupons.length === 0 && (
+                  <tr>
+                    <td colSpan="7" className="text-center text-muted py-4">No promo coupons created yet.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

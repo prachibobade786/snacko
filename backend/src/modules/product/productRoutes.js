@@ -8,7 +8,8 @@ const {
   getProductById,
   getProductsByCategoryId,
   updateProduct,
-  deleteProduct
+  deleteProduct,
+  updateProductOffer
 } = require("./productController");
 
 const router = express.Router();
@@ -19,6 +20,7 @@ router.get("/products", getAllProducts);
 router.get("/products/:id", getProductById);
 router.get("/categories/:categoryId/products", getProductsByCategoryId);
 router.put("/products/:id", verifyToken, isAdmin, updateProduct);
+router.patch("/products/:id/offer", verifyToken, isAdmin, updateProductOffer);
 router.delete("/products/:id", verifyToken, isAdmin, deleteProduct);
 
 module.exports = router;

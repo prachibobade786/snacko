@@ -12,16 +12,31 @@ export default function ProductCard({ product, cartItem, addToCart, updateCartQu
     setMode("product-details");
   };
 
+  // Database-driven discount price logic
+  const hasDiscount = product.discount_price !== null && parseFloat(product.discount_price) < parseFloat(product.price);
+  const isBogo = product.product_id % 5 === 0;
+  const activePrice = hasDiscount ? parseFloat(product.discount_price) : parseFloat(product.price);
+  const originalPrice = hasDiscount ? parseFloat(product.price) : null;
+  const discountPercent = hasDiscount ? Math.round(((parseFloat(product.price) - parseFloat(product.discount_price)) / parseFloat(product.price)) * 100) : 0;
+  const estDeliveryTime = `${8 + (product.product_id % 5)} min`;
+
   return (
     <div className="product-card">
+      {/* Dynamic badges */}
+      <span className="badge-time">{estDeliveryTime}</span>
+      
+      {isBogo ? (
+        <span className="badge-off">Buy 1 Get 1</span>
+      ) : hasDiscount ? (
+        <span className="badge-off">{discountPercent}% off</span>
+      ) : null}
+
       {/* Stock status tag */}
       {product.stock_quantity <= 0 ? (
         <span className="stock-tag out-of-stock">Out of Stock</span>
       ) : isLowStock ? (
         <span className="stock-tag low-stock">Only {product.stock_quantity} left</span>
-      ) : (
-        <span className="stock-tag in-stock">Available ({product.stock_quantity} units)</span>
-      )}
+      ) : null}
 
       <div className="product-image-container cursor-pointer" onClick={handleViewDetails}>
         {product.product_image ? (
@@ -29,7 +44,7 @@ export default function ProductCard({ product, cartItem, addToCart, updateCartQu
             src={product.product_image.startsWith("http://") || product.product_image.startsWith("https://") ? product.product_image : `/${product.product_image}`} 
             alt={product.product_name} 
             className="w-full h-full" 
-            style={{ maxHeight: "100px", objectFit: "contain" }}
+            style={{ maxHeight: "80px", objectFit: "contain" }}
             onError={(e) => {
               e.target.onerror = null; 
               e.target.style.display = 'none';
@@ -50,19 +65,22 @@ export default function ProductCard({ product, cartItem, addToCart, updateCartQu
         )}
       </div>
 
-      <div className="flex-1 flex flex-col justify-between">
+      <div className="flex-1 flex flex-col justify-between" style={{ marginTop: "8px" }}>
         <div className="cursor-pointer" onClick={handleViewDetails}>
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{product.category_name}</span>
-          <h4 className="font-bold text-sm text-slate-800 leading-snug mt-0.5 line-clamp-2">{product.product_name}</h4>
-          <p className="text-xs text-slate-500 line-clamp-1 mt-1">{product.product_description || "Fresh & local"}</p>
+          <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">{product.category_name}</span>
+          <h4 className="product-name mt-0.5 line-clamp-2" style={{ height: "38px" }}>{product.product_name}</h4>
+          <p className="product-meta line-clamp-1">{product.product_description || "1 pack"}</p>
         </div>
 
-        <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-100">
-          <span className="font-extrabold text-slate-900">₹{product.price}</span>
+        <div className="product-foot">
+          <span className="price">
+            Rs {activePrice}
+            {originalPrice && <small>Rs {originalPrice}</small>}
+          </span>
           
           {product.stock_quantity <= 0 ? (
-            <button disabled className="btn btn-secondary !py-1 !px-3 text-xs cursor-not-allowed">
-              Unavailable
+            <button disabled className="btn btn-secondary !py-1 !px-3 text-xs cursor-not-allowed" style={{ height: "30px", borderRadius: "15px" }}>
+              Out
             </button>
           ) : cartItem ? (
             <div className="card-quantity-adjuster">
@@ -70,22 +88,25 @@ export default function ProductCard({ product, cartItem, addToCart, updateCartQu
                 onClick={() => updateCartQuantity(product.product_id, -1)}
                 className="card-quantity-btn"
               >
-                <Minus size={12} />
+                <Minus size={10} />
               </button>
               <span className="card-quantity-val">{cartItem.quantity}</span>
               <button 
                 onClick={() => updateCartQuantity(product.product_id, 1)}
                 className="card-quantity-btn"
+                disabled={cartItem.quantity >= 4}
+                title={cartItem.quantity >= 4 ? "Maximum 4 units allowed" : ""}
               >
-                <Plus size={12} />
+                <Plus size={10} />
               </button>
             </div>
           ) : (
             <button 
               onClick={() => addToCart(product)}
-              className="btn btn-outline !py-1 !px-3 text-xs"
+              className="add-btn"
+              aria-label={`Add ${product.product_name} to cart`}
             >
-              ADD
+              +
             </button>
           )}
         </div>

@@ -32,8 +32,6 @@ export const checkPincodeService = async (pincode) => {
   return await res.json();
 };
 
-
-
 // 2. Authentication / Profile
 export const login = async (email, password) => {
   const res = await fetch(`${API_BASE}/users/login`, {
@@ -87,7 +85,6 @@ export const updateProfile = async (token, profileData) => {
   return await res.json();
 };
 
-
 // 3. Addresses
 export const fetchAddresses = async (token) => {
   const res = await fetch(`${API_BASE}/address`, {
@@ -121,7 +118,6 @@ export const updateAddress = async (token, addressId, addressData) => {
   });
   return await res.json();
 };
-
 
 // 4. Orders & Checkout
 export const placeOrder = async (token, orderData) => {

@@ -1,5 +1,5 @@
 import React from "react";
-import { MapPin, Compass, AlertTriangle } from "lucide-react";
+import { Compass, AlertTriangle, MapPin } from "lucide-react";
 
 export default function LocationSelector({
   pincode,
@@ -9,70 +9,78 @@ export default function LocationSelector({
   handlePincodeSubmit,
   detectGeoLocation
 }) {
-  if (!pincode) {
-    return (
-      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-center max-w-lg mx-auto mt-8 shadow-sm">
-        <MapPin size={48} className="text-amber-500 mx-auto mb-4" />
-        <h2 className="text-xl font-bold text-slate-800 mb-2">Select Your Delivery Location</h2>
-        <p className="text-slate-600 text-sm mb-4">
-          Please enter your pincode to see the grocery stock and products available in your nearest Blinkit warehouse.
-        </p>
-        <div className="flex flex-col gap-2 max-w-sm mx-auto">
-          <form onSubmit={handlePincodeSubmit} className="flex gap-2 w-full">
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    handlePincodeSubmit(e);
+  };
+
+  return (
+    <section className="hero animate-fade-in">
+      <div className="hero-inner">
+        <div className="hero-text">
+          <span className="eyebrow">Delivered in 10 minutes</span>
+          <h1>Crave it. <span>Get it.</span></h1>
+          <p>Chips, cola, chocolate or midnight snacks — Snacko gets your cravings to your door before the couch gets comfortable.</p>
+          
+          <form className="hero-form" onSubmit={handleSubmit}>
             <input 
               type="text" 
-              placeholder="E.g. 122003 or 110017" 
-              className="flex-1 border border-slate-300 rounded-xl px-4 py-2 text-sm focus:outline-emerald-500"
+              placeholder="Enter your delivery pincode (e.g. 122003)" 
               value={pincodeInput}
               onChange={(e) => setPincodeInput(e.target.value)}
             />
-            <button type="submit" className="btn btn-primary">Check</button>
+            <button type="submit">Find snacks</button>
           </form>
+
           <button 
             type="button" 
             onClick={detectGeoLocation}
-            className="btn btn-secondary w-full flex items-center justify-center gap-2 mt-1"
+            className="btn btn-secondary flex items-center justify-center gap-2 mt-4 text-xs !py-2 !px-4"
+            style={{ borderRadius: "10px", width: "fit-content" }}
           >
-            <Compass size={16} />
-            Use Current Location
+            <Compass size={14} />
+            <span>Use Current Location</span>
           </button>
+
+          {serviceable === false && (
+            <div className="flex items-center gap-2 mt-4 bg-red-50 text-red-700 text-xs font-semibold p-3 rounded-xl border border-red-200">
+              <AlertTriangle size={16} className="shrink-0" />
+              <span>
+                Apologies! Pincode <strong>{pincode}</strong> is unserviceable. Try test pincodes like <strong>122003</strong> or <strong>110001</strong>.
+              </span>
+            </div>
+          )}
+
+          {!pincode && (
+            <div className="flex items-center gap-1.5 mt-4 text-[11px] text-[#DDC9B8]">
+              <MapPin size={12} className="text-orange-500" />
+              <span>Please select your location/pincode to view local stock.</span>
+            </div>
+          )}
+
+          <div className="hero-stats">
+            <div><strong>10 min</strong>avg delivery</div>
+            <div><strong>2,400+</strong>snacks &amp; drinks</div>
+            <div><strong>150+</strong>cities</div>
+          </div>
+        </div>
+
+        <div className="hero-visual">
+          <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Illustration of an open Snacko delivery box with a chips packet and a bottle">
+            <ellipse cx="100" cy="176" rx="60" ry="10" fill="#000000" opacity="0.15"/>
+            <path d="M40 90L100 68L160 90L100 112L40 90Z" fill="#F5811F"/>
+            <path d="M40 90V150L100 172V112L40 90Z" fill="#D8690F"/>
+            <path d="M160 90V150L100 172V112L160 90Z" fill="#F5811F"/>
+            <path d="M62 100C68 108 132 108 138 100" stroke="#FDF8F3" stroke-width="4" stroke-linecap="round"/>
+            <rect x="72" y="30" width="30" height="46" rx="6" transform="rotate(-8 72 30)" fill="#E8A33D"/>
+            <rect x="72" y="30" width="30" height="46" rx="6" transform="rotate(-8 72 30)" fill="#F0B85B" opacity="0.5"/>
+            <rect x="108" y="20" width="20" height="52" rx="8" fill="#D85A30"/>
+            <rect x="112" y="14" width="12" height="10" rx="2" fill="#8A2E14"/>
+            <circle cx="34" cy="52" r="4" fill="#7CB342"/>
+            <circle cx="168" cy="58" r="4" fill="#7CB342"/>
+          </svg>
         </div>
       </div>
-    );
-  }
-
-  if (serviceable === false) {
-    return (
-      <div className="bg-rose-50 border border-rose-200 rounded-2xl p-6 text-center max-w-lg mx-auto mt-8 shadow-sm">
-        <AlertTriangle size={48} className="text-rose-500 mx-auto mb-4" />
-        <h2 className="text-xl font-bold text-slate-800 mb-2">Unserviceable Area</h2>
-        <p className="text-slate-600 text-sm mb-4">
-          Apologies! We do not currently service pincode <strong>{pincode}</strong>.
-          Try entering test pincodes like <strong>122003</strong> or <strong>110001</strong>.
-        </p>
-        <div className="flex flex-col gap-2 max-w-sm mx-auto">
-          <form onSubmit={handlePincodeSubmit} className="flex gap-2 w-full">
-            <input 
-              type="text" 
-              placeholder="E.g. 122003" 
-              className="flex-1 border border-slate-300 rounded-xl px-4 py-2 text-sm focus:outline-emerald-500"
-              value={pincodeInput}
-              onChange={(e) => setPincodeInput(e.target.value)}
-            />
-            <button type="submit" className="btn btn-primary">Try Again</button>
-          </form>
-          <button 
-            type="button" 
-            onClick={detectGeoLocation}
-            className="btn btn-secondary w-full flex items-center justify-center gap-2 mt-1"
-          >
-            <Compass size={16} />
-            Detect My Location
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return null;
+    </section>
+  );
 }

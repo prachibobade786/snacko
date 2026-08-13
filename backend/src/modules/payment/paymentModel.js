@@ -4,16 +4,42 @@ const db = require("../../config/db");
 const addPayment = (payment, callback) => {
   const { order_id, user_id, amount, payment_method, payment_status, transaction_id } = payment;
 
-  const sql = `
-    INSERT INTO payments
-    (order_id, user_id, amount, payment_method, payment_status, transaction_id)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `;
-
   db.query(
-    sql,
-    [order_id, user_id, amount, payment_method, payment_status, transaction_id],
-    callback
+    "SELECT payment_id FROM payments WHERE order_id = ?",
+    [order_id],
+    (err, rows) => {
+      if (err) {
+        return callback(err);
+      }
+
+      if (rows && rows.length > 0) {
+        const paymentId = rows[0].payment_id;
+        const sql = `
+          UPDATE payments
+          SET amount = ?, payment_method = ?, payment_status = ?, transaction_id = ?, user_id = ?
+          WHERE payment_id = ?
+        `;
+        db.query(
+          sql,
+          [amount, payment_method, payment_status, transaction_id, user_id, paymentId],
+          (updateErr, updateResult) => {
+            if (updateErr) return callback(updateErr);
+            callback(null, { insertId: paymentId, affectedRows: updateResult.affectedRows });
+          }
+        );
+      } else {
+        const sql = `
+          INSERT INTO payments
+          (order_id, user_id, amount, payment_method, payment_status, transaction_id)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `;
+        db.query(
+          sql,
+          [order_id, user_id, amount, payment_method, payment_status, transaction_id],
+          callback
+        );
+      }
+    }
   );
 };
 
